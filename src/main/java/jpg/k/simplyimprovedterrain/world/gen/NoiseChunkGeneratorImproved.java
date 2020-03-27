@@ -160,7 +160,7 @@ public abstract class NoiseChunkGeneratorImproved<T extends GenerationSettings> 
         int chunkZ = chunkpos.z;
         int worldChunkX = chunkX << 4;
         int worldChunkZ = chunkZ << 4;
-        Iterator structureIterator = Feature.field_214488_aQ.iterator();
+        Iterator structureIterator = Feature.ILLAGER_STRUCTURES.iterator();
 
         // Start with some structure generation related tasks
         label175:
@@ -200,7 +200,7 @@ public abstract class NoiseChunkGeneratorImproved<T extends GenerationSettings> 
                     } while(!(structurepiece instanceof AbstractVillagePiece));
 
                     AbstractVillagePiece abstractvillagepiece = (AbstractVillagePiece)structurepiece;
-                    JigsawPattern.PlacementBehaviour jigsawpattern$placementbehaviour = abstractvillagepiece.func_214826_b().getPlacementBehaviour();
+                    JigsawPattern.PlacementBehaviour jigsawpattern$placementbehaviour = abstractvillagepiece.getJigsawPiece().getPlacementBehaviour();
                     if(jigsawpattern$placementbehaviour == JigsawPattern.PlacementBehaviour.RIGID) {
                         villagePieceList.add(abstractvillagepiece);
                     }
@@ -262,14 +262,14 @@ public abstract class NoiseChunkGeneratorImproved<T extends GenerationSettings> 
         }
 
         ChunkPrimer chunkprimer = (ChunkPrimer)chunkIn;
-        Heightmap oceanFloorHeightmap = chunkprimer.func_217303_b(Heightmap.Type.OCEAN_FLOOR_WG);
-        Heightmap worldSurfaceHeightmap = chunkprimer.func_217303_b(Heightmap.Type.WORLD_SURFACE_WG);
+        Heightmap oceanFloorHeightmap = chunkprimer.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
+        Heightmap worldSurfaceHeightmap = chunkprimer.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
         BlockPos.Mutable blockPosMutable = new BlockPos.Mutable();
         ObjectListIterator<AbstractVillagePiece> villagePieceIterator = villagePieceList.iterator();
         ObjectListIterator<JigsawJunction> jigsawJunctionIterator = jigsawJunctionList.iterator();
 
         // 16xHx16 chunks are divided into 16x16x16 sections. Start at the top one.
-        ChunkSection chunksection = chunkprimer.func_217332_a((worldHeight - 1) >> 4);
+        ChunkSection chunksection = chunkprimer.getSection((worldHeight - 1) >> 4);
         chunksection.lock();
 
         for (int y = worldHeight - 1; y >= 0; y--) {
@@ -278,7 +278,7 @@ public abstract class NoiseChunkGeneratorImproved<T extends GenerationSettings> 
 
             if(chunksection.getYLocation() >> 4 != chunkSectionIndex) {
                 chunksection.unlock();
-                chunksection = chunkprimer.func_217332_a(chunkSectionIndex);
+                chunksection = chunkprimer.getSection(chunkSectionIndex);
                 chunksection.lock();
             }
 
@@ -385,7 +385,7 @@ public abstract class NoiseChunkGeneratorImproved<T extends GenerationSettings> 
                     blockstate = this.defaultFluid;
                 }
 
-                if(p_222529_3_.func_222684_d().test(blockstate)) {
+                if(p_222529_3_.getHeightLimitPredicate().test(blockstate)) {
                     return y + 1;
                 }
             }
@@ -455,7 +455,7 @@ public abstract class NoiseChunkGeneratorImproved<T extends GenerationSettings> 
         int k = i * 16;
         int l = j * 16;
         BlockPos blockpos = new BlockPos(k, 0, l);
-        Biome biome = this.func_225552_a_(region.func_225523_d_(), blockpos.add(8, 8, 8));
+        Biome biome = this.getBiome(region.getBiomeManager(), blockpos.add(8, 8, 8));
         SharedSeedRandom sharedseedrandom = new SharedSeedRandom();
         long i1 = sharedseedrandom.setDecorationSeed(region.getSeed(), k, l);
         GenerationStage.Decoration[] var11 = GenerationStage.Decoration.values();
@@ -524,9 +524,9 @@ public abstract class NoiseChunkGeneratorImproved<T extends GenerationSettings> 
                 // This, combined with using 3D noise to pick surface textures, will enable overhangs
                 // to not either block or copy the surface below them.
 
-                double d1 = this.surfaceDepthNoise.func_215460_a((double)k1 * 0.0625D, (double)l1 * 0.0625D, 0.0625D, (double)i1 * 0.0625D) * 15.0D; // This is Simplex
+                double d1 = this.surfaceDepthNoise.noiseAt((double)k1 * 0.0625D, (double)l1 * 0.0625D, 0.0625D, (double)i1 * 0.0625D) * 15.0D; // This is Simplex
                 blockposMutable = blockposMutable.setPos(k + i1, i2, l + j1);
-                Biome biome = region.func_226691_t_(blockposMutable);
+                Biome biome = region.getBiome(blockposMutable);
                 biome.buildSurface(sharedseedrandom, chunk, k1, l1, i2, d1, this.getSettings().getDefaultBlock(), this.getSettings().getDefaultFluid(), this.getSeaLevel(), this.world.getSeed());
 
                 // Non-disk deposits

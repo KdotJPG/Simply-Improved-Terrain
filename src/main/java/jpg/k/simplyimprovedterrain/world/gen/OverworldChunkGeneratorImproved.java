@@ -1,31 +1,25 @@
 package jpg.k.simplyimprovedterrain.world.gen;
 
-import net.minecraft.crash.CrashReport;
-import net.minecraft.crash.ReportedException;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.util.SharedSeedRandom;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.village.VillageSiege;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.provider.BiomeProvider;
-import net.minecraft.world.gen.*;
-import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.OverworldGenSettings;
+import net.minecraft.world.gen.WorldGenRegion;
 import net.minecraft.world.gen.feature.Feature;
-import net.minecraft.world.gen.feature.DecoratedFeatureConfig;
-import net.minecraft.world.gen.feature.SphereReplaceFeature;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraft.world.spawner.CatSpawner;
 import net.minecraft.world.spawner.PatrolSpawner;
 import net.minecraft.world.spawner.PhantomSpawner;
 import net.minecraft.world.spawner.WorldEntitySpawner;
 
-import java.util.Iterator;
 import java.util.List;
 
 public class OverworldChunkGeneratorImproved extends NoiseChunkGeneratorImproved<OverworldGenSettings> {
@@ -56,7 +50,7 @@ public class OverworldChunkGeneratorImproved extends NoiseChunkGeneratorImproved
     public void spawnMobs(WorldGenRegion region) {
         int i = region.getMainChunkX();
         int j = region.getMainChunkZ();
-        Biome biome = region.func_226691_t_((new ChunkPos(i, j)).asBlockPos());
+        Biome biome = region.getBiome((new ChunkPos(i, j)).asBlockPos());
         SharedSeedRandom sharedseedrandom = new SharedSeedRandom();
         sharedseedrandom.setDecorationSeed(region.getSeed(), i << 4, j << 4);
         WorldEntitySpawner.performWorldGenSpawning(region, biome, i, j, sharedseedrandom);
@@ -107,11 +101,11 @@ public class OverworldChunkGeneratorImproved extends NoiseChunkGeneratorImproved
         float f2 = 0.0F;
         boolean i = true;
         int j = this.getSeaLevel();
-        float f3 = this.biomeProvider.func_225526_b_(xc, j, zc).getDepth();
+        float f3 = this.biomeProvider.getNoiseBiome(xc, j, zc).getDepth();
 
         for(int k = -2; k <= 2; ++k) {
             for(int l = -2; l <= 2; ++l) {
-                Biome biome = this.biomeProvider.func_225526_b_(xc + k, j, zc + l);
+                Biome biome = this.biomeProvider.getNoiseBiome(xc + k, j, zc + l);
                 float f4 = biome.getDepth();
                 float f5 = biome.getScale();
                 if(this.isAmplified && f4 > 0.0F) {
