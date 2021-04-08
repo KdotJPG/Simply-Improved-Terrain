@@ -1,0 +1,73 @@
+# This is an example mods.toml file. It contains the data relating to the loading mods.
+# There are several mandatory fields (#mandatory), and many more that are optional (#optional).
+# The overall format is standard TOML format, v0.5.0.
+# Note that there are a couple of TOML lists in this file.
+# Find more information on toml format here:  https://github.com/toml-lang/toml
+# The name of the mod loader type to load - for regular FML @Mod mods it should be javafml
+modLoader="javafml" #mandatory
+# A version range to match for said mod loader - for regular FML @Mod it will be the forge version
+loaderVersion="[34,)" #mandatory This is typically bumped every Minecraft version by Forge. See our download page for lists of versions.
+# The license for you mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
+# Review your options at https://choosealicense.com/. All rights reserved is the default copyright stance, and is thus the default here.
+license="All rights reserved"
+# A URL to refer people to when problems occur with this mod
+issueTrackerURL="http://my.issue.tracker/" #optional
+# A list of mods - how many allowed here is determined by the individual mod loader
+[[mods]] #mandatory
+# The modid of the mod
+modId="simplyimprovedterrain" #mandatory
+# The version number of the mod - there's a few well known ${} variables useable here or just hardcode it
+version="0.3-Forge" #mandatory
+ # A display name for the mod
+displayName="Simply Improved Terrain" #mandatory
+# A URL to query for updates for this mod. See the JSON update specification <here>
+# updateJSONURL="http://myurl.me/" #optional
+# A URL for the "homepage" for this mod, displayed in the mod UI
+# displayURL="http://example.com/" #optional
+# A file name (in the root of the mod JAR) containing a logo for display
+logoFile="simplyimprovedterrain.png" #optional
+# A text field displayed in the mod UI
+# credits="Thanks for this example mod goes to Java" #optional
+# A text field displayed in the mod UI
+authors="K.jpg" #optional
+# The description text for the mod (multi line!) (#mandatory)
+description='''
+Simply Improved Terrain rewrites some of terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. This mod is designed as a drop-in with intent for it to be compatible with most modpacks and datapacks. It is also intended to serve as a suggestion to Mojang regarding the direction they should take world generation.
+
+Specifically, Simply Improved Terrain focuses on reworking directionally-biased, chunk-biased, or otherwise strongly-artificial-looking features. The changes include the following:
+- Replaces trilinear interpolation with conditional noise-layer-skipping, to make full-resolution noise practical. Also removes problematic high-frequency layers.
+- Replaces unmitigated Perlin noise with domain-rotated noise, to remove its characteristic 45-90-degree bias from the horizontal worldplane.
+- Re-implements terrain noise "shelves" in a way that localizes height, accounts for domain rotation, and doesn't require interpolation for smoothing.
+- Replaces End Island noise with full-resolution jittered metaballs, to remove grid patterns and allow intersecting islands to merge more nicely.
+- Introduces radius variation to the disk-shaped sand/gravel/clay/ice deposits, to make them more convincing. Also removes the sharp points. Idea credit: Origin Realms.
+- Replaces Overworld biome transition smoothing with scattered sampling, to conceal the underlying 4x4-interval grid. Also makes rivers wider to avoid constrictions.
+- Replaces the gradient vectors in 2D simplex noise (used for surface block patterns) with a lattice-symmetric 24-sized set which reduces 45-degree artifacts.
+- Injects domain-rotation into existing unmitigated Perlin noise, so that other features can also take advantage.
+
+Planned future changes:
+- Rewrite Overworld biome map generation to remove or reduce large-scale directional bias, while following the same layer-based ruleset.
+- Replace octahedral-shaped block deposits (particularly in the Nether) with less directionally-biased alternatives.
+- Remove directional bias from the netherrack patterns in portal ruins, by replacing the square/diamond-shaped falloff with euclidean falloff.
+- Replace Nether and End biome grid magnifiers with full-resolution samplers.
+- Improve the shapes of the isolated lake and lava pool features.
+
+'''
+# A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
+[[dependencies.simplyimprovedterrain]] #optional
+    # the modid of the dependency
+    modId="forge" #mandatory
+    # Does this dependency have to exist - if not, ordering below must be specified
+    mandatory=true #mandatory
+    # The version range of the dependency
+    versionRange="[34,)" #mandatory
+    # An ordering relationship for the dependency - BEFORE or AFTER required if the relationship is not mandatory
+    ordering="NONE"
+    # Side this dependency is applied on - BOTH, CLIENT or SERVER
+    side="BOTH"
+# Here's another dependency
+[[dependencies.simplyimprovedterrain]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.16,1.17)"
+    ordering="NONE"
+    side="BOTH"
