@@ -8,15 +8,15 @@ Specifically, Simply Improved Terrain focuses on reworking directionally-biased,
 - Replaces trilinear interpolation with conditional noise-layer-skipping, to make full-resolution noise practical. Also removes problematic high-frequency layers.
 - Replaces unmitigated Perlin noise with domain-rotated noise, to remove its characteristic 45-90-degree bias from the horizontal worldplane.
 - Re-implements terrain noise "shelves" in a way that localizes height, accounts for domain rotation, and doesn't require interpolation for smoothing.
+- Injects domain-rotation into existing unmitigated Perlin noise, so that other features can also take advantage.
 - Replaces End Island noise with full-resolution jittered metaballs, to remove grid patterns and allow intersecting islands to merge more nicely.
 - Introduces radius variation to the disk-shaped sand/gravel/clay/ice deposits, to make them more convincing. Also removes the sharp points. Idea credit: Origin Realms.
 - Replaces Overworld biome transition smoothing with scattered sampling, to conceal the underlying 4x4-interval grid. Also makes rivers wider to avoid constrictions.
 - Replaces the gradient vectors in 2D simplex noise (used for surface block patterns) with a lattice-symmetric 24-sized set which reduces 45-degree artifacts.
-- Injects domain-rotation into existing unmitigated Perlin noise, so that other features can also take advantage.
+- Removes directional bias from the netherrack patterns below ruined portal structures, by replacing the `|Δx|+|Δz|` falloff with a Euclidean-based falloff.
 
 Planned future changes:
 - Rewrite Overworld biome map generation to remove or reduce large-scale directional bias, while following the same layer-based ruleset.
 - Replace octahedral-shaped block deposits (particularly in the Nether) with less directionally-biased alternatives.
-- Remove directional bias from the netherrack patterns in portal ruins, by replacing the square/diamond-shaped falloff with euclidean falloff.
 - Replace Nether and End biome grid magnifiers with full-resolution samplers.
 - Improve the shapes of the isolated lake and lava pool features.

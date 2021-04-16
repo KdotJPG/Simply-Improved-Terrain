@@ -15,7 +15,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '0.3-Forge'
+version = '0.3.1-Forge'
 group = 'jpg.k.simplyimprovedterrain' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'simplyimprovedterrain'
 
@@ -122,7 +122,7 @@ jar {
         attributes([
             "Specification-Title": "simplyimprovedterrain",
             "Specification-Vendor": "K.jpg",
-            "Specification-Version": "0.3-Forge",
+            "Specification-Version": "0.3.1-Forge",
             "Implementation-Title": project.name,
             "Implementation-Version": "${version}",
             "Implementation-Vendor": "K.jpg",

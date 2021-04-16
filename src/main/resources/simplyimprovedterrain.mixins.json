@@ -10,7 +10,8 @@
     "MixinAbstractSphereReplaceConfig",
     "MixinWorldGenRegion",
     "MixinSimplexNoiseGenerator",
-    "MixinNotchNoiseGenerator"
+    "MixinNotchNoiseGenerator",
+    "MixinRuinedPortalPiece"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -17,7 +17,7 @@ issueTrackerURL="http://my.issue.tracker/" #optional
 # The modid of the mod
 modId="simplyimprovedterrain" #mandatory
 # The version number of the mod - there's a few well known ${} variables useable here or just hardcode it
-version="0.3-Forge" #mandatory
+version="0.3.1-Forge" #mandatory
  # A display name for the mod
 displayName="Simply Improved Terrain" #mandatory
 # A URL to query for updates for this mod. See the JSON update specification <here>
@@ -32,7 +32,7 @@ logoFile="simplyimprovedterrain.png" #optional
 authors="K.jpg" #optional
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-Simply Improved Terrain rewrites some of terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. This mod is designed as a drop-in with intent for it to be compatible with most modpacks and datapacks. It is also intended to serve as a suggestion to Mojang regarding the direction they should take world generation.
+Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. This mod is designed as a drop-in with intent for it to be compatible with most modpacks and datapacks. It is also intended to serve as a suggestion to Mojang regarding the direction they should take world generation.
 
 Specifically, Simply Improved Terrain focuses on reworking directionally-biased, chunk-biased, or otherwise strongly-artificial-looking features. The changes include the following:
 - Replaces trilinear interpolation with conditional noise-layer-skipping, to make full-resolution noise practical. Also removes problematic high-frequency layers.
