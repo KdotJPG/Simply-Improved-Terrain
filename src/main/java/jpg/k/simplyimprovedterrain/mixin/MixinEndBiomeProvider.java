@@ -48,14 +48,14 @@ public class MixinEndBiomeProvider {
             double f = MetaballEndIslandNoise.INSTANCE.getNoise(((ISimplexNoiseGenerator)(Object)generator).getPermTable(), biomeX * 4 + 2, biomeZ * 4 + 2);
             cir.setReturnValue(f > 40.0F?this.field_242642_j:(f >= 0.0F?this.field_242643_k:(f < -20.0F?this.field_242644_l:this.field_242645_m)));
         }
-		cir.cancel(); // TODO port
+		cir.cancel();
     }
 
-    // TODO port
     @Inject(method = "func_235317_a_", at = @At("HEAD"), cancellable = true)
     private static void inject_func_235317_a_(SimplexNoiseGenerator simplex, int biomeX, int biomeZ, CallbackInfoReturnable<Float> cir) {
         float f = (float)MetaballEndIslandNoise.INSTANCE.getNoise(((ISimplexNoiseGenerator)(Object)simplex).getPermTable(), biomeX * 8, biomeZ * 8);
     	cir.setReturnValue(f);
 		cir.cancel();
     }
+
 }

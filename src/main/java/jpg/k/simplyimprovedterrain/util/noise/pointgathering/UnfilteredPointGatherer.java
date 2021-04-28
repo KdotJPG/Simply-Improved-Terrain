@@ -13,11 +13,11 @@ public class UnfilteredPointGatherer<TTag>
     private static final double TRIANGLE_CIRCUMRADIUS = TRIANGLE_HEIGHT * (2.0 / 3.0);
     private static final double JITTER_AMOUNT = TRIANGLE_HEIGHT;
     public static final double MAX_GRIDSCALE_DISTANCE_TO_CLOSEST_POINT = JITTER_AMOUNT + TRIANGLE_CIRCUMRADIUS;
-    
+
     // Primes for jitter hash.
     private static final int PRIME_X = 7691;
     private static final int PRIME_Z = 30869;
-    
+
     // Jitter in JITTER_VECTOR_COUNT_MULTIPLIER*12 directions, symmetric about the hex grid.
     // cos(t)=sin(t+const) where const=(1/4)*2pi, and N*12 is a multiple of 4, so we can overlap arrays.
     // Repeat the first in every set of three due to how the pseudo-modulo indexer works.
@@ -53,14 +53,14 @@ public class UnfilteredPointGatherer<TTag>
             JITTER_SINCOS[j] = JITTER_SINCOS[j - N_VECTORS_WITH_REPETITION];
         }
     }
-    
+
     private final double frequency, inverseFrequency;
     private final LatticePoint[] pointsToSearch;
-    
+
     public UnfilteredPointGatherer(double frequency, double maxPointContributionRadius) {
         this.frequency = frequency;
         this.inverseFrequency = 1.0 / frequency;
-        
+
         // How far out in the jittered hex grid we need to look for points.
         // Assumes the jitter can go any angle, which should only very occasionally
         // cause us to search one more layer out than we need.
@@ -68,7 +68,7 @@ public class UnfilteredPointGatherer<TTag>
                 + MAX_GRIDSCALE_DISTANCE_TO_CLOSEST_POINT;
         double maxContributingDistanceSq = maxContributingDistance * maxContributingDistance;
         double latticeSearchRadius = maxContributingDistance * INVERSE_TRIANGLE_HEIGHT;
-        
+
         // Start at the central point, and keep traversing bigger hexagonal layers outward.
         // Exclude almost all points which can't possibly be jittered into range.
         // The "almost" is again because we assume any jitter angle is possible,
@@ -123,13 +123,13 @@ public class UnfilteredPointGatherer<TTag>
                 zsv++;
             }
         }
-        
+
         pointsToSearch = pointsToSearchList.toArray(new LatticePoint[0]);
     }
-    
+
     public List<GatheredPoint<TTag>> getPoints(long seed, double x, double z) {
         x *= frequency; z *= frequency;
-        
+
         // Simplex 2D Skew.
         double s = (x + z) * 0.366025403784439;
         double xs = x + s, zs = z + s;
@@ -162,26 +162,26 @@ public class UnfilteredPointGatherer<TTag>
         // Pre-multiply for hash.
         int xsbp = xsb * PRIME_X;
         int zsbp = zsb * PRIME_Z;
-        
+
         // Unskewed coordinate of the closest triangle lattice vertex.
         // Everything will be relative to this.
         double bt = (xsb + zsb) * -0.211324865405187;
         double xb = xsb + bt, zb = zsb + bt;
-        
+
         // Loop through pregenerated array of all points which could be in range, relative to the closest.
         ArrayList<GatheredPoint<TTag>> worldPointsList = new ArrayList<>(pointsToSearch.length);
         for (int i = 0; i < pointsToSearch.length; i++) {
             LatticePoint point = pointsToSearch[i];
-            
+
             // Prime multiplications for jitter hash
             int xsvp = xsbp + point.xsvp;
             int zsvp = zsbp + point.zsvp;
-            
+
             // Compute the jitter hash
             int hash = xsvp ^ zsvp;
             hash = (((int)(seed & 0xFFFFFFFFL) ^ hash) * 668908897)
                     ^ (((int)(seed >> 32) ^ hash) * 35311);
-            
+
             // Even selection within 0-24, using pseudo-modulo technique.
             int indexBase = (hash & 0x3FFFFFF) * 0x5555555;
             int index = (indexBase >> 26) & VECTOR_INDEX_MASK;
@@ -190,7 +190,7 @@ public class UnfilteredPointGatherer<TTag>
             // Jittered point, not yet unscaled for frequency
             double scaledX = xb + point.xv + JITTER_SINCOS[index];
             double scaledZ = zb + point.zv + JITTER_SINCOS[index + JITTER_SINCOS_OFFSET];
-            
+
             // Unscale the coordinate and add it to the list.
             // "Unfiltered" means that, even if the jitter took it out of range, we don't check for that.
             // It's up to the user to handle out-of-range points as if they weren't there.
@@ -201,7 +201,7 @@ public class UnfilteredPointGatherer<TTag>
             GatheredPoint<TTag> worldPoint = new GatheredPoint<TTag>(scaledX * inverseFrequency, scaledZ * inverseFrequency, remainingHash);
             worldPointsList.add(worldPoint);
         }
-        
+
         return worldPointsList;
     }
 
@@ -216,4 +216,5 @@ public class UnfilteredPointGatherer<TTag>
             this.zv = zsv + t;
         }
     }
+
 }

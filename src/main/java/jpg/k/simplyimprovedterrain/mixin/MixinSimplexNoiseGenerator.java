@@ -12,13 +12,12 @@ import net.minecraft.world.gen.SimplexNoiseGenerator;
 
 @Mixin(SimplexNoiseGenerator.class)
 public class MixinSimplexNoiseGenerator implements ISimplexNoiseGenerator {
-	
-	private static final double ROOT3 = Math.sqrt(3);
+
+    private static final double ROOT3 = Math.sqrt(3);
     private static final double SKEW_FACTOR_2D = 0.5 * (ROOT3 - 1);
     private static final double UNSKEW_FACTOR_2D = (3 - ROOT3) / 6;
-    
-    private static final double[] GRAD_VECTORS_2_24_128 =
-    {
+
+    private static final double[] GRAD_VECTORS_2_24_128 = {
          0.130526192220052,  0.99144486137381,   0.38268343236509,   0.923879532511287,  0.608761429008721,  0.793353340291235,  0.793353340291235,  0.608761429008721,
          0.923879532511287,  0.38268343236509,   0.99144486137381,   0.130526192220051,  0.99144486137381,  -0.130526192220051,  0.923879532511287, -0.38268343236509,
          0.793353340291235, -0.60876142900872,   0.608761429008721, -0.793353340291235,  0.38268343236509,  -0.923879532511287,  0.130526192220052, -0.99144486137381,
@@ -53,31 +52,31 @@ public class MixinSimplexNoiseGenerator implements ISimplexNoiseGenerator {
         -0.38268343236509,  -0.923879532511287, -0.923879532511287, -0.38268343236509,  -0.923879532511287,  0.38268343236509,  -0.38268343236509,   0.923879532511287,
     };
     static {
-    	// Normalize noise result so we don't need to do a multiply in the actual noise code.
-    	for (int i = 0; i < GRAD_VECTORS_2_24_128.length; i++) GRAD_VECTORS_2_24_128[i] /= 0.01001634121365712;
+        // Normalize noise result so we don't need to do a multiply in the actual noise code.
+        for (int i = 0; i < GRAD_VECTORS_2_24_128.length; i++) GRAD_VECTORS_2_24_128[i] /= 0.01001634121365712;
     }
 
-	@Shadow
-	private int[] p;
-	
-	@Override
-	public int[] getPermTable() {
-		return p;
-	}
-	
-	private double kernel2_24(int hash, double dx, double dy) {
-		double a = dx * dx + dy * dy;
-		if (a < 0.5) {
-			a -= 0.5;
-			a *= a; a *= a;
-			return a * (GRAD_VECTORS_2_24_128[hash & 0xFE] * dx + GRAD_VECTORS_2_24_128[hash | 0x01] * dy);
-		} else
-			return 0;
-	}
-	
-	// Borrowed and modified
+    @Shadow
+    private int[] p;
+
+    @Override
+    public int[] getPermTable() {
+        return p;
+    }
+
+    private double kernel2_24(int hash, double dx, double dy) {
+        double a = dx * dx + dy * dy;
+        if (a < 0.5) {
+            a -= 0.5;
+            a *= a; a *= a;
+            return a * (GRAD_VECTORS_2_24_128[hash & 0xFE] * dx + GRAD_VECTORS_2_24_128[hash | 0x01] * dy);
+        } else
+            return 0;
+    }
+
+    // Borrowed and modified
     @Inject(method = "getValue(DD)D", at = @At("HEAD"), cancellable = true)
-	public void injectSample(double x, double y, CallbackInfoReturnable<Double> cir) {
+    public void injectSample(double x, double y, CallbackInfoReturnable<Double> cir) {
         double d = (x + y) * SKEW_FACTOR_2D;
         int i = MathHelper.floor(x + d);
         int j = MathHelper.floor(y + d);

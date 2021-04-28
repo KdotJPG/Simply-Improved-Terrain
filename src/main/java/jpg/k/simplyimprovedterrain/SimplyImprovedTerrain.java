@@ -15,6 +15,6 @@ public class SimplyImprovedTerrain
     private static final Logger LOGGER = LogManager.getLogger();
 
     public SimplyImprovedTerrain() {
-    	
+
     }
 }

@@ -84,9 +84,9 @@ public class NeoNotchNoise {
         return gXYZ;
     }
 
-	/*
-	 * Utility
-	 */
+    /*
+     * Utility
+     */
 
     private static int fastFloor(double x) {
         int xi = (int)x;
@@ -112,9 +112,9 @@ public class NeoNotchNoise {
         return 0.5 + t * (-0.9375 + t * t * (0.625 + t * t * -0.1875));
     }
 
-	/*
-	 * Gradients
-	 */
+    /*
+     * Gradients
+     */
 
     public static final double N3 = 2.742445288166158;
     private static final double[] GRADIENTS_3D;
@@ -170,15 +170,15 @@ public class NeoNotchNoise {
                  1.1721513422464978,  3.0862664687972017,  0.0,                 0.0
         };
         int nGrad3 = grad3.length / 4;
-        
+
         GRADIENTS_3D = new double[PSIZE * 4];
         for (int i = 0; i < grad3.length; i++) {
-        	grad3[i] /= N3;
+            grad3[i] /= N3;
         }
         for (int i = 0; i < PSIZE; i++) {
             double j = i / nGrad3; // j range 0 to 42, because floor((PSIZE-1)/nGrad3 = 2047/48). Spends less time at 42 than the others.
             double shelfOffset = j > 24 ? Double.NEGATIVE_INFINITY : -j / 24.0; // Range -1 to 0, or negative infinity for no shelf.
-            
+
             int grad3Index = (i % nGrad3) * 4;
 
             GRADIENTS_3D[i * 4 + 0] = grad3[grad3Index + 0];
@@ -187,4 +187,5 @@ public class NeoNotchNoise {
             GRADIENTS_3D[i * 4 + 3] = shelfOffset;
         }
     }
+
 }

@@ -4,14 +4,14 @@ Simply Improved Terrain rewrites some of the terrain generation components in Mi
 
 ### Changes Included:
 
-- Replaces trilinear interpolation with conditional noise layer skipping, to make full-resolution noise practical. Also removes problematic high-frequency layers.
-- Replaces unmitigated Perlin noise with domain-rotated noise, to remove Perlin's characteristic 45-90-degree bias from the horizontal worldplane.
+- Replaces trilinear interpolation with conditional noise layer skipping, to make full-resolution noise practical. Also removes problematic high-frequency layers. This eliminates the majority of the grid patterns from the terrain.
+- Replaces unmitigated Perlin noise with domain-rotated noise, to remove Perlin's characteristic 45-90-degree bias from the horizontal worldplane. This solves the direction variety problem without requiring as much re-tuning as the canonical solution of using Simplex-type noise.
 - Re-implements terrain noise "shelves" in a way that localizes height, accounts for domain rotation, and doesn't require interpolation for smoothing.
 - Injects domain-rotation into existing unmitigated Perlin noise, so that other features can also take advantage.
-- Replaces End Island noise with full-resolution jittered metaballs, to remove grid patterns and allow intersecting islands to merge more nicely.
+- Replaces the gradient vectors in 2D Simplex noise (used for surface block patterns) with a lattice-symmetric 24-sized set which reduces 45-degree artifacts.
+- Replaces End Island generator with full-resolution jittered metaballs, to remove grid patterns and allow intersecting islands to merge more nicely.
 - Introduces radius variation to the disk-shaped sand/gravel/clay/ice deposits, to make them more convincing. Also removes the sharp points. Idea credit: Origin Realms.
 - Replaces Overworld biome transition smoothing with scattered sampling, to conceal the underlying 4x4-interval grid. Also makes rivers wider to avoid constrictions.
-- Replaces the gradient vectors in 2D Simplex noise (used for surface block patterns) with a lattice-symmetric 24-sized set which reduces 45-degree artifacts.
 - Removes directional bias from the netherrack patterns below ruined portal structures, by replacing the `|Δx|+|Δz|` falloff with a Euclidean-based falloff.
 
 ### Planned future changes:

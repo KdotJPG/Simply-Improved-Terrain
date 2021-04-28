@@ -13,27 +13,27 @@ import net.minecraft.world.gen.ImprovedNoiseGenerator;
 @Mixin(ImprovedNoiseGenerator.class)
 public class MixinNotchNoiseGenerator {
 
-	@Shadow
-	public @Final double xCoord;
+    @Shadow
+    public @Final double xCoord;
 
-	@Shadow
-	public @Final double yCoord;
+    @Shadow
+    public @Final double yCoord;
 
-	@Shadow
-	public @Final double zCoord;
-   
-	// Borrowed and modified
+    @Shadow
+    public @Final double zCoord;
+
+    // Borrowed and modified
     @Inject(method = "func_215456_a", at = @At("HEAD"), cancellable = true)
-	public void inject_func_215456_a(double x, double y, double z, double shelfParam1, double shelfParam2, CallbackInfoReturnable<Double> cir) {
-    	
-    	// Domain Rotation!
+    public void inject_func_215456_a(double x, double y, double z, double shelfParam1, double shelfParam2, CallbackInfoReturnable<Double> cir) {
+
+        // Domain Rotation!
         double xz = x + z;
         double s2 = xz * -0.211324865405187;
         double yy = y * 0.577350269189626;
         x += s2 + yy;
         z += s2 + yy;
         y = xz * -0.577350269189626 + yy;
-    	
+
         double d0 = x + this.xCoord;
         double d1 = y + this.yCoord;
         double d2 = z + this.zCoord;
@@ -47,7 +47,7 @@ public class MixinNotchNoiseGenerator {
         double d7 = MathHelper.perlinFade(d4);
         double d8 = MathHelper.perlinFade(d5);
         double d9;
-        
+
         // Shelf code removed. I don't think it's important anywhere other than the terrain gen.
         // Maybe I will re-add it a la NeoNotchNoise.java, for mods which call upon this.
         // For now, I want to improve Nether biome placement.
@@ -56,4 +56,5 @@ public class MixinNotchNoiseGenerator {
         cir.setReturnValue(value);
         cir.cancel();
     }
+
 }
