@@ -33,5 +33,11 @@
   },
   "suggests": {
     "flamingo": "*"
+  },
+
+  "custom": {
+    "lithium:options": {
+      "mixin.gen.fast_island_noise": false
+    }
   }
 }
