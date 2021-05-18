@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "simplyimprovedterrain",
+  "version": "${version}",
+
+  "name": "Simply Improved Terrain",
+  "description": "Rewrites terrain generation components in Minecraft to improve their visual results.",
+  "authors": [
+    "K.jpg"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
+  },
+
+  "license": "MIT License",
+  "icon": "assets/simplyimprovedterrain/simplyimprovedterrain.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "jpg.k.simplyimprovedterrain.SimplyImprovedTerrain"
+    ]
+  },
+  "mixins": [
+    "simplyimprovedterrain.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.7.4",
+    "fabric": "*",
+    "minecraft": "1.16.x"
+  },
+  "suggests": {
+    "flamingo": "*"
+  }
+}

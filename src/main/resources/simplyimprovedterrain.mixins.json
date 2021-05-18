@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "jpg.k.simplyimprovedterrain.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "MixinChunkRegion",
+    "MixinDiskFeature",
+    "MixinNoiseChunkGenerator",
+    "MixinNotchNoiseSampler",
+    "MixinRuinedPortalStructurePiece",
+    "MixinSimplexNoiseSampler",
+    "MixinTheEndBiomeSource"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
