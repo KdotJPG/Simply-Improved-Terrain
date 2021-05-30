@@ -13,9 +13,9 @@ authors="K.jpg"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on reworking directionally-biased, chunk-biased, or otherwise strongly-artificial-looking features. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks. It is also intended to serve as a suggestion to Mojang regarding the technical direction they should take world generation.
+Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on increasing directional variety, grid independence, and overall feature variation. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks. It is also intended to serve as a suggestion to Mojang regarding the technical direction they should take world generation.
 
-Changes included:
+Technical Changes:
 - Replaces trilinear interpolation with conditional noise layer skipping, to make full-resolution noise practical. Also removes problematic high-frequency layers. This eliminates the majority of the grid patterns from the terrain.
 - Replaces unmitigated Perlin noise with domain-rotated noise, to remove Perlin's characteristic 45-90-degree bias from the horizontal worldplane. This solves the direction variety problem without requiring as much re-tuning as the canonical solution of using Simplex-type noise.
 - Re-implements terrain noise "shelves" in a way that localizes height, accounts for domain rotation, and doesn't require interpolation for smoothing.
@@ -26,7 +26,7 @@ Changes included:
 - Replaces Overworld biome transition smoothing with scattered sampling, to conceal the underlying 4x4-interval grid. Also makes rivers wider to avoid constrictions.
 - Removes directional bias from the netherrack patterns below ruined portal structures, by replacing the |Δx|+|Δz| falloff with a Euclidean-based falloff.
 
-Planned future changes:
+Planned Future Changes:
 - Rewrite Overworld biome map generation to remove or reduce large-scale directional bias, while following the same layer-based ruleset.
 - Replace octahedral-shaped block deposits (particularly in the Nether) with less directionally-biased alternatives.
 - Remove directional bias from the netherrack patterns in portal ruins, by replacing the square/diamond-shaped falloff with euclidean falloff.
