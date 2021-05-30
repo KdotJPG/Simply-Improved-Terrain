@@ -1,6 +1,6 @@
 # Simply Improved Terrain
 
-Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on reworking directionally-biased, chunk-biased, or otherwise strongly-artificial-looking features. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks. It is also intended to serve as a suggestion to Mojang regarding the technical direction they should take world generation.
+Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on increasing directional variety, grid independence, and overall feature variation. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks. It is also intended to serve as a suggestion to Mojang regarding the technical direction they should take world generation.
 
 ### Changes Included:
 
