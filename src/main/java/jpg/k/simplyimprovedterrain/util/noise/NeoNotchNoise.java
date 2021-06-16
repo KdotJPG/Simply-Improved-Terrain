@@ -1,5 +1,7 @@
 package jpg.k.simplyimprovedterrain.util.noise;
 
+import net.minecraft.world.gen.ChunkRandom;
+
 /**
  * K.jpg's Neo-Notch Noise.
  * To serve as replacement for Minecraft's "Notch noise". This produces discontinuities to create shelf effects,
@@ -35,7 +37,7 @@ public class NeoNotchNoise {
         }
     }
 
-    public NeoNotchNoise(java.util.Random rand) {
+    public NeoNotchNoise(ChunkRandom rand) {
         perm = new short[PSIZE];
         permGrad3 = new Grad3[PSIZE];
         short[] source = new short[PSIZE];

@@ -67,9 +67,9 @@ public class MixinRuinedPortalStructurePiece {
                     float threshold = falloffThresholds[boundedOffsetIndex];
                     if (random.nextDouble() < (double)threshold) {
                         int y = getBaseHeight(world, x, z, this.verticalPlacement);
-                        int yBounded = flag ? y : Math.min(boundingBox.minY, y);
+                        int yBounded = flag ? y : Math.min(boundingBox.getMinY(), y);
                         currentBlockPos.set(x, yBounded, z);
-                        if (Math.abs(yBounded - boundingBox.minY) <= 3 && this.canFillNetherrack(world, currentBlockPos)) {
+                        if (Math.abs(yBounded - boundingBox.getMinY()) <= 3 && this.canFillNetherrack(world, currentBlockPos)) {
                             this.placeNetherrackBottom(random, world, currentBlockPos);
                             if (this.properties.overgrown) {
                                 this.generateOvergrownLeaves(random, world, currentBlockPos);

@@ -11,7 +11,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.noise.PerlinNoiseSampler;
 
 @Mixin(PerlinNoiseSampler.class)
-public class MixinNotchNoiseSampler {
+public abstract class MixinNotchNoiseSampler {
 
     @Shadow
     public @Final double originX;
@@ -22,8 +22,10 @@ public class MixinNotchNoiseSampler {
     @Shadow
     public @Final double originZ;
 
+    @Shadow protected abstract double sample(int sectionX, int sectionY, int sectionZ, double localX, double localY, double localZ, double fadeLocalY);
+
     // Borrowed and modified
-    @Inject(method = "sample", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "sample(DDDDD)D", at = @At("HEAD"), cancellable = true)
     public void injectSample(double x, double y, double z, double shelfParam1, double shelfParam2, CallbackInfoReturnable<Double> cir) {
 
         // Domain Rotation!
@@ -34,25 +36,21 @@ public class MixinNotchNoiseSampler {
         z += s2 + yy;
         y = xz * -0.577350269189626 + yy;
 
-        double d0 = x + this.originX;
-        double d1 = y + this.originY;
-        double d2 = z + this.originZ;
-        int i = MathHelper.floor(d0);
-        int j = MathHelper.floor(d1);
-        int k = MathHelper.floor(d2);
-        double d3 = d0 - (double)i;
-        double d4 = d1 - (double)j;
-        double d5 = d2 - (double)k;
-        double d6 = MathHelper.perlinFade(d3);
-        double d7 = MathHelper.perlinFade(d4);
-        double d8 = MathHelper.perlinFade(d5);
-        double d9;
+        x += this.originX;
+        y += this.originY;
+        z += this.originZ;
+        int xb = MathHelper.floor(x);
+        int yb = MathHelper.floor(y);
+        int zb = MathHelper.floor(z);
+        double localX = x - (double)xb;
+        double localY = y - (double)yb;
+        double localZ = z - (double)zb;
 
         // Shelf code removed. I don't think it's important anywhere other than the terrain gen.
         // Maybe I will re-add it a la NeoNotchNoise.java, for mods which call upon this.
         // For now, I want to improve Nether biome placement.
 
-        double value = ((PerlinNoiseSampler)(Object)this).sample(i, j, k, d3, d4, d5, d6, d7, d8);
+        double value = this.sample(xb, yb, zb, localX, localY, localZ, localY);
         cir.setReturnValue(value);
         cir.cancel();
     }

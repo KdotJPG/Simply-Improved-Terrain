@@ -23,31 +23,41 @@ public class MixinTheEndBiomeSource {
     private long seed;
 
     @Shadow
-    private Biome field_26700;
+    private Biome centerBiome;
 
     @Shadow
-    private Biome field_26701;
+    private Biome highlandsBiome;
 
     @Shadow
-    private Biome field_26702;
+    private Biome midlandsBiome;
 
     @Shadow
-    private Biome field_26703;
+    private Biome smallIslandsBiome;
 
     @Shadow
-    private Biome field_26704;
+    private Biome barrensBiome;
 
     @Shadow
     private @Final SimplexNoiseSampler noise;
 
-    // Must be Overwrite for other mods (e.g. Abnormals Core) to mix into its return statements instead of only Vanilla's.
+    /**
+     * Gets the island biome using the new island noise from Simply Improved Terrain.
+     * Must be Overwrite for other mods (e.g. Abnormals Core) to mix into its return statements instead of only Vanilla's.
+     * @author K.jpg
+     */
     @Overwrite
     public Biome getBiomeForNoiseGen(int biomeX, int biomeY, int biomeZ) {
         if ((long)biomeX * (long)biomeX + (long)biomeZ * (long)biomeZ <= 0x10000L) {
-            return this.field_26700;
+            return this.centerBiome;
         } else {
             double f = MetaballEndIslandNoise.INSTANCE.getNoise(((ISimplexNoiseSampler)(Object) noise).getPermTable(), biomeX * 4 + 2, biomeZ * 4 + 2);
-            return f > 40.0F?this.field_26701:(f >= 0.0F?this.field_26702:(f < -20.0F?this.field_26703:this.field_26704));
+            if (f > 40.0F) {
+                return this.highlandsBiome;
+            } else if (f >= 0.0F) {
+                return this.midlandsBiome;
+            } else {
+                return f < -20.0F ? this.smallIslandsBiome : this.barrensBiome;
+            }
         }
     }
 

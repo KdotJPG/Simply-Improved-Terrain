@@ -1,10 +1,14 @@
 package jpg.k.simplyimprovedterrain.mixin;
 
+import java.util.Iterator;
 import java.util.Random;
 
+import net.minecraft.block.Blocks;
+import net.minecraft.block.FallingBlock;
 import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.feature.DiskFeatureConfig;
+import net.minecraft.world.gen.feature.util.FeatureContext;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,11 +23,20 @@ import net.minecraft.world.gen.feature.DiskFeature;
 public class MixinDiskFeature {
 
     @Inject(method = "generate", at = @At("HEAD"), cancellable = true)
-    public void injectGenerate(StructureWorldAccess structureWorldAccess, ChunkGenerator chunkGenerator, Random random, BlockPos blockPos, DiskFeatureConfig diskFeatureConfig,
-                                     CallbackInfoReturnable<Boolean> cir) {
+    public void injectGenerate(FeatureContext<DiskFeatureConfig> context, CallbackInfoReturnable<Boolean> cir) {
+        DiskFeatureConfig diskFeatureConfig = (DiskFeatureConfig)context.getConfig();
+        Random random = context.getRandom();
+        BlockPos blockPos = context.getOrigin();
+        StructureWorldAccess structureWorldAccess = context.getWorld();
+        boolean isFallingBlockDisk = diskFeatureConfig.state.getBlock() instanceof FallingBlock;
+
+        // Height range configuration
+        int yPos = blockPos.getY();
+        int yMax = yPos + diskFeatureConfig.halfHeight;
+        int yMin = yPos - diskFeatureConfig.halfHeight - 1;
 
         // Choose a radius range roughly 0.75x to 1.25x the defined radius
-        int configuredRadius = diskFeatureConfig.radius.getValue(random);
+        int configuredRadius = diskFeatureConfig.radius.get(random);
         int radiusMin = (configuredRadius * 3 + 2) >> 2;
         int radiusRange = configuredRadius >> 1;
 
@@ -47,21 +60,38 @@ public class MixinDiskFeature {
                 int dx = x - blockPos.getX();
                 int dz = z - blockPos.getZ();
                 if (dx * dx + dz * dz <= radiusSqInt) {
-                    for (int y = blockPos.getY() - diskFeatureConfig.ySize; y <= blockPos.getY() + diskFeatureConfig.ySize; ++y) {
-                        currentBlockPos.set(x, y, z);
-                        Block block = structureWorldAccess.getBlockState(currentBlockPos).getBlock();
+                    boolean placedBlockThisColumn = false;
 
-                        for (BlockState blockState : diskFeatureConfig.targets) {
-                            if (blockState.isOf(block)) {
-                                structureWorldAccess.setBlockState(currentBlockPos, diskFeatureConfig.state, 2);
-                                flag = true;
-                                break;
+                    for(int y = yMax; y >= yMin; --y) {
+                        currentBlockPos.set(x, y, z);
+                        BlockState blockState = structureWorldAccess.getBlockState(currentBlockPos);
+                        Block block = blockState.getBlock();
+                        boolean placedBlockThisPosition = false;
+                        if (y > yMin) {
+                            Iterator var21 = diskFeatureConfig.targets.iterator();
+
+                            while(var21.hasNext()) {
+                                BlockState blockState2 = (BlockState)var21.next();
+                                if (blockState2.isOf(block)) {
+                                    structureWorldAccess.setBlockState(currentBlockPos, diskFeatureConfig.state, 2);
+                                    flag = true;
+                                    placedBlockThisPosition = true;
+                                    break;
+                                }
                             }
                         }
+
+                        if (isFallingBlockDisk && placedBlockThisColumn && blockState.isAir()) {
+                            BlockState blockState3 = diskFeatureConfig.state.isOf(Blocks.RED_SAND) ? Blocks.RED_SANDSTONE.getDefaultState() : Blocks.SANDSTONE.getDefaultState();
+                            structureWorldAccess.setBlockState(new BlockPos(x, y + 1, z), blockState3, 2);
+                        }
+
+                        placedBlockThisColumn = placedBlockThisPosition;
                     }
                 }
             }
         }
+
 
         cir.setReturnValue(flag);
         cir.cancel();
