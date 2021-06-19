@@ -203,6 +203,49 @@ public class MixinNoiseChunkGenerator {
         int yBottomOffset = yGridBottomOffset * this.horizontalNoiseResolution;
 
         BlockPos.Mutable currentBlockPos = new BlockPos.Mutable();
+        for (int y = yTop, ys = yTop; ys >= 0; ys = y) {
+            int chunkSectionIndex = chunk.getSectionIndex(ys);
+            ChunkSection chunkSection = chunk.getSection(chunkSectionIndex);
+
+            for (int z = 0; z < 16; z++) {
+                int worldZ = chunkWorldZ | z;
+                for (int x = 0; x < 16; x++) {
+                    int worldX = chunkWorldX | x;
+
+                    // Sample for this column now.
+                    columnContext.setXZ(x, z);
+
+                    // Vertical range, just in this chunk section
+                    for (y = ys; chunk.getSectionIndex(y) == chunkSectionIndex && y >= 0; y--) {
+
+                        // Computes only the necessary noise layers to resolve what this block should be.
+                        double noiseSignValue = columnContext.sampleNoiseSign(y + yBottomOffset);
+
+                        // TODO replace (BlockSource)this.deepslateSource, (class_6357)class_6357.field_33652 with completed samplers for this mod
+                        BlockState blockState = this.getBlockState(structureWeightSampler, aquiferSampler, (BlockSource) this.deepslateSource, (class_6357) class_6357.field_33652, x, y, z, noiseSignValue);
+
+                        if (blockState != AIR) {
+                            if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
+                                currentBlockPos.set(worldX, y, worldZ);
+                                ((ProtoChunk) chunk).addLightSource(currentBlockPos);
+                            }
+
+                            chunkSection.setBlockState(x, y & 15, z, blockState, false);
+                            heightmap.trackUpdate(x, y, z, blockState);
+                            heightmap2.trackUpdate(x, y, z, blockState);
+                            if (aquiferSampler.needsFluidTick() && !blockState.getFluidState().isEmpty()) {
+                                currentBlockPos.set(worldX, y, worldZ);
+                                chunk.getFluidTickScheduler().schedule(currentBlockPos, blockState.getFluidState().getFluid(), 0);
+                            }
+                        }
+
+                    }
+
+                }
+            }
+        }
+
+        /*BlockPos.Mutable currentBlockPos = new BlockPos.Mutable();
         for (int z = 0; z < 16; z++) {
             int worldZ = chunkWorldZ | z;
             for (int x = 0; x < 16; x++) {
@@ -242,7 +285,7 @@ public class MixinNoiseChunkGenerator {
                 }
 
             }
-        }
+        }*/
 
         cir.setReturnValue(chunk);
     }
