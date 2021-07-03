@@ -91,7 +91,7 @@ public class SimplyImprovedNoiseColumnSampler {
         private ChunkLocalTerrainContext chunkLocalTerrainContext;
 
         private ColumnSamplingContext() {
-
+            
         }
 
         public void setChunkLocalTerrainContext(ChunkLocalTerrainContext chunkLocalTerrainContext) {

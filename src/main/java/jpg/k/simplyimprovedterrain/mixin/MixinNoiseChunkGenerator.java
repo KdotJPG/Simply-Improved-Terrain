@@ -22,6 +22,7 @@ import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
 import net.minecraft.util.math.*;
 import net.minecraft.world.chunk.ChunkSection;
 
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,6 +31,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.OptionalInt;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import jpg.k.simplyimprovedterrain.mixinapi.ISimplexNoiseSampler;
@@ -133,79 +136,72 @@ public class MixinNoiseChunkGenerator {
         }
     }
 
-    // TODO any updates required here. This lets villages generate properly.
-    /*@Inject(method = "sampleHeightmap", at = @At("HEAD"), cancellable = true)
-    private void injectSampleHeightmap(int x, int z, BlockState[] states, Predicate<BlockState> predicate,
-                                       CallbackInfoReturnable<Integer> cir) {
+    @Inject(method = "sampleHeightmap", at = @At("HEAD"), cancellable = true)
+    private void sampleHeightmap(int x, int z, @Nullable BlockState[] states, @Nullable Predicate<BlockState> predicate, int vanillaNoiseGridMinY, int vanillaNoiseGridSizeY,
+                                        CallbackInfoReturnable<OptionalInt> cir) {
+        int chunkX = ChunkSectionPos.getSectionCoord(x);
+        int chunkZ = ChunkSectionPos.getSectionCoord(z);
+        ChunkPos chunkPos = new ChunkPos(chunkX, chunkZ);
+        int chunkWorldX = chunkPos.getStartX();
+        int chunkWorldZ = chunkPos.getStartZ();
+        class_6350 aquiferSampler = this.method_36386(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
 
-        // Get full biome map for this chunk.
-        // TODO we can optimize this by only generating the specific column.
-        // This method is called infrequently though. Mainly for village placement.
-        double[][][] blendedBiomeMap = getBlendedBiomeMap(x, z);
+        // Setup to generate this column.
+        ChunkLocalTerrainContext chunkContext = new ChunkLocalTerrainContext(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
+        SimplyImprovedNoiseColumnSampler.ColumnSamplingContext columnContext = this.newNoiseColumnSampler.columnSamplingContextThreadLocal();
+        columnContext.setChunkLocalTerrainContext(chunkContext);
+        columnContext.setXZ(x & 15, z & 15);
 
-        for (int y = worldHeight - 1; y >= 0; y--) {
+        int yTop = vanillaNoiseGridSizeY * this.verticalNoiseResolution - 1;
+        int yBottomOffset = vanillaNoiseGridMinY * this.verticalNoiseResolution;
 
-            // Vanilla threshold formula, higher resolution
+        for (int y = yTop; y >= 0; y--) {
+            int yy = y + yBottomOffset;
 
-            // Initial scale and offset from configurations
-            double thresholdingValue = y * effectiveThresholdMultiplier + effectiveThresholdOffset;
+            // Computes only the necessary noise layers to resolve what this block should be.
+            double noiseSignValue = columnContext.sampleNoiseSign(yy);
 
-            // Removed compared to Vanilla: Extra 2D noise layers
-            // thresholdingValue += this.getWorldCoordRandomDensityAt(x, z) * generationShapeConfig.getDensityFactor();
-
-            // Biome scale and depth offset from this particular location.
-            thresholdingValue = (thresholdingValue + blendedBiomeMap[0][z & 15][x & 15]) * blendedBiomeMap[1][z & 15][x & 15];
-
-            // Make valleys less deep than mountains are tall
-            if (thresholdingValue > 0) thresholdingValue *= 4;
-
-            // Apply pregenerated slide modifiers from the NoiseSettings/GenerationShapeConfig. Important for The End in particular.
-            thresholdingValue += this.thresholdSlideModifiers[y];
-
-            // Apply terrain noise in full-resolution.
-            // Important optimization: We don't always need to calculate all of the octaves. Outside of biome height range, we even skip them all.
-            // After all, we really only need the sign of the value.
-            double noiseValue = computeNecessaryNoiseOctaves(x, y, z, thresholdingValue);
-
-            // Set block based on thresholded noise sign and vertical position.
-            BlockState blockState = this.getBlockState(noiseValue, y);
+            BlockState blockState = this.getBlockState(StructureWeightSampler.INSTANCE, aquiferSampler, (BlockSource) this.deepslateSource, (class_6357) class_6357.field_33652, x, yy, z, noiseSignValue);
             if (states != null) {
                 states[y] = blockState;
             }
 
             if (predicate != null && predicate.test(blockState)) {
-                cir.setReturnValue(y + 1);
-                cir.cancel();
+                cir.setReturnValue(OptionalInt.of(yy + 1));
                 return;
             }
         }
-
-        cir.setReturnValue(0);
         cir.cancel();
-    }*/
+    }
 
     @Inject(method = "populateNoise(Lnet/minecraft/world/gen/StructureAccessor;Lnet/minecraft/world/chunk/Chunk;II)Lnet/minecraft/world/chunk/Chunk;", at = @At("HEAD"), cancellable = true)
-    public void populateNewNoise(StructureAccessor accessor, Chunk chunk, int yGridBottomOffset, int yGridHeight, CallbackInfoReturnable<Chunk> cir) {
+    public void populateNewNoise(StructureAccessor accessor, Chunk chunk, int vanillaNoiseGridMinY, int vanillaNoiseGridSizeY, CallbackInfoReturnable<Chunk> cir) {
         Heightmap heightmap = chunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
         Heightmap heightmap2 = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
         ChunkPos chunkPos = chunk.getPos();
         int chunkWorldX = chunkPos.getStartX();
         int chunkWorldZ = chunkPos.getStartZ();
         StructureWeightSampler structureWeightSampler = new StructureWeightSampler(accessor, chunk);
-        class_6350 aquiferSampler = this.method_36386(yGridBottomOffset, yGridHeight, chunkPos);
+        class_6350 aquiferSampler = this.method_36386(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
         //DoubleFunction<BlockSource> oreVeinSampler = this.method_36387(i, chunkPos, consumer);
         //DoubleFunction<class_6357> thisMustBeNoodleCaves = this.method_36462(i, chunkPos, consumer);
         ChunkLocalTerrainContext chunkContext = new ChunkLocalTerrainContext(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
         SimplyImprovedNoiseColumnSampler.ColumnSamplingContext columnContext = this.newNoiseColumnSampler.columnSamplingContextThreadLocal();
         columnContext.setChunkLocalTerrainContext(chunkContext);
 
-        int yTop = yGridHeight * this.horizontalNoiseResolution - 1;
-        int yBottomOffset = yGridBottomOffset * this.horizontalNoiseResolution;
+        int yTop = vanillaNoiseGridSizeY * this.verticalNoiseResolution - 1;
+        int yBottomOffset = vanillaNoiseGridMinY * this.verticalNoiseResolution;
 
         BlockPos.Mutable currentBlockPos = new BlockPos.Mutable();
-        for (int y = yTop, ys = yTop; ys >= 0; ys = y) {
+
+        long current = System.nanoTime();
+
+        // This loop works with the nested loop for the chunk section Y range.
+        // The "ys = y" update statement updates "ys" with the beginning of the next chunk section.
+        for (int y = yTop + yBottomOffset, ys = y; ys >= yBottomOffset; ys = y) {
             int chunkSectionIndex = chunk.getSectionIndex(ys);
             ChunkSection chunkSection = chunk.getSection(chunkSectionIndex);
+            int chunkSectionYBottom = chunkSection.getYOffset();
 
             for (int z = 0; z < 16; z++) {
                 int worldZ = chunkWorldZ | z;
@@ -216,10 +212,10 @@ public class MixinNoiseChunkGenerator {
                     columnContext.setXZ(x, z);
 
                     // Vertical range, just in this chunk section
-                    for (y = ys; chunk.getSectionIndex(y) == chunkSectionIndex && y >= 0; y--) {
+                    for (y = ys; y >= chunkSectionYBottom; y--) {
 
                         // Computes only the necessary noise layers to resolve what this block should be.
-                        double noiseSignValue = columnContext.sampleNoiseSign(y + yBottomOffset);
+                        double noiseSignValue = columnContext.sampleNoiseSign(y);
 
                         // TODO replace (BlockSource)this.deepslateSource, (class_6357)class_6357.field_33652 with completed samplers for this mod
                         BlockState blockState = this.getBlockState(structureWeightSampler, aquiferSampler, (BlockSource) this.deepslateSource, (class_6357) class_6357.field_33652, x, y, z, noiseSignValue);
@@ -245,49 +241,20 @@ public class MixinNoiseChunkGenerator {
             }
         }
 
-        /*BlockPos.Mutable currentBlockPos = new BlockPos.Mutable();
-        for (int z = 0; z < 16; z++) {
-            int worldZ = chunkWorldZ | z;
-            for (int x = 0; x < 16; x++) {
-                int worldX = chunkWorldX | x;
-
-                // Sample for this column now.
-                columnContext.setXZ(x, z);
-
-                ChunkSection chunkSection = chunk.getSection(chunk.countVerticalSections() - 1);
-                for (int y = yTop; y >= 0; y--) {
-                    int chunkSectionIndex = chunk.getSectionIndex(y);
-                    if (chunk.getSectionIndex(chunkSection.getYOffset()) != chunkSectionIndex) {
-                        chunkSection = chunk.getSection(chunkSectionIndex);
-                    }
-
-                    // Computes only the necessary noise layers to resolve what this block should be.
-                    double noiseSignValue = columnContext.sampleNoiseSign(y + yBottomOffset);
-
-                    // TODO replace (BlockSource)this.deepslateSource, (class_6357)class_6357.field_33652 with completed samplers for this mod
-                    BlockState blockState = this.getBlockState(structureWeightSampler, aquiferSampler, (BlockSource)this.deepslateSource, (class_6357)class_6357.field_33652, x, y, z, noiseSignValue);
-
-                    if (blockState != AIR) {
-                        if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
-                            currentBlockPos.set(worldX, y, worldZ);
-                            ((ProtoChunk)chunk).addLightSource(currentBlockPos);
-                        }
-
-                        chunkSection.setBlockState(x, y & 15, z, blockState, false);
-                        heightmap.trackUpdate(x, y, z, blockState);
-                        heightmap2.trackUpdate(x, y, z, blockState);
-                        if (aquiferSampler.needsFluidTick() && !blockState.getFluidState().isEmpty()) {
-                            currentBlockPos.set(worldX, y, worldZ);
-                            chunk.getFluidTickScheduler().schedule(currentBlockPos, blockState.getFluidState().getFluid(), 0);
-                        }
-                    }
-
-                }
-
-            }
-        }*/
+        long elapsed = System.nanoTime() - current;
+        t(elapsed);
 
         cir.setReturnValue(chunk);
+    }
+
+    long totalNanoTime = 0;
+    int nChunks = 0;
+    private synchronized void t(long t) {
+        totalNanoTime += t;
+        nChunks ++;
+        if ((nChunks & 31) == 0) {
+            System.out.println(totalNanoTime / (nChunks * 1_000_000_000d));
+        }
     }
 
     @Shadow
