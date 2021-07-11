@@ -11,12 +11,16 @@ import net.minecraft.world.gen.chunk.GenerationShapeConfig;
 /**
  * Created by K.jpg on 6/12/2021.
  */
-public class ChunkLocalTerrainContext {
+public final class ChunkLocalTerrainContext {
 
-    private int chunkWorldX, chunkWorldZ;
-    private double[] biomeDepthAndInverseScaleBlending;
+    private final int chunkWorldX, chunkWorldZ;
+    private final double[] biomeDepthAndInverseScaleBlending;
 
-    public ChunkLocalTerrainContext(int chunkWorldX, int chunkWorldZ, long worldSeed, BiomeSource biomeSource, GenerationShapeConfig config, int[] endIslandNoisePermutationTable) {
+    public static ChunkLocalTerrainContext Create(int chunkWorldX, int chunkWorldZ, long worldSeed, BiomeSource biomeSource, GenerationShapeConfig config, int[] endIslandNoisePermutationTable) {
+        return new ChunkLocalTerrainContext(chunkWorldX, chunkWorldZ, worldSeed, biomeSource, config, endIslandNoisePermutationTable);
+    }
+
+    private ChunkLocalTerrainContext(int chunkWorldX, int chunkWorldZ, long worldSeed, BiomeSource biomeSource, GenerationShapeConfig config, int[] endIslandNoisePermutationTable) {
         this.chunkWorldX = chunkWorldX;
         this.chunkWorldZ = chunkWorldZ;
 

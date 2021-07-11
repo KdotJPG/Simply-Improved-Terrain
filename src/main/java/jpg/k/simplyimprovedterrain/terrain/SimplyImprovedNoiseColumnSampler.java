@@ -1,13 +1,8 @@
 package jpg.k.simplyimprovedterrain.terrain;
 
-import java.lang.ThreadLocal;
-import java.sql.Struct;
-
-import net.minecraft.util.math.noise.SimplexNoiseSampler;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.gen.StructureWeightSampler;
 import net.minecraft.world.gen.chunk.GenerationShapeConfig;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Created by K.jpg on 6/10/2021.
@@ -28,7 +23,6 @@ public class SimplyImprovedNoiseColumnSampler {
         //this.densityNoise = densityNoise;
 
         // Pre-calculate initial part of the thresholding formula.
-        //double twiceInverseWorldHeight = 2.0 / config.getHeight(); // TODO I saw this value hardcoded in the new code. Revisit.
         double twiceInverseHeight = (2.0 / 32.0) * inverseVerticalNoiseResolution;
         double densityFactor = config.getDensityFactor();
         double densityOffset = config.getDensityOffset();
@@ -114,8 +108,12 @@ public class SimplyImprovedNoiseColumnSampler {
         public double sampleNoiseSign(int y) {
             double thresholdingValue = calcThresholdingValue(y, depth, inverseScale);
             thresholdingValue = applyThresholdSlides(y, thresholdingValue);
+
+            // TODO Doing this here before the clamp in NoiseChunkGenerator.GetBlockState could cause problems with underground structures. Revisit this if any problems are found.
             thresholdingValue += this.structureWeightSampler.getWeight(worldX, y, worldZ) * 400.0;
+
             double noiseSignValue = noise.sampleNoiseSign(thresholdingValue, worldX, y, worldZ);
+
             // TODO noise caves & corresponding conditional noise layer skipping.
             return noiseSignValue;
         }

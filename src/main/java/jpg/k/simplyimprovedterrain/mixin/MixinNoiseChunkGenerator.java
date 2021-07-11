@@ -1,16 +1,22 @@
 package jpg.k.simplyimprovedterrain.mixin;
 
+import jpg.k.simplyimprovedterrain.mixinapi.ISimplexNoiseSampler;
 import jpg.k.simplyimprovedterrain.terrain.ChunkLocalTerrainContext;
-import jpg.k.simplyimprovedterrain.terrain.SimplyImprovedTerrainNoiseSampler;
 import jpg.k.simplyimprovedterrain.terrain.SimplyImprovedNoiseColumnSampler;
+import jpg.k.simplyimprovedterrain.terrain.SimplyImprovedTerrainNoiseSampler;
+import jpg.k.simplyimprovedterrain.util.noise.NeoNotchNoise;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.class_6350;
 import net.minecraft.class_6357;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.noise.SimplexNoiseSampler;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.gen.BlockSource;
 import net.minecraft.world.gen.ChunkRandom;
@@ -19,9 +25,6 @@ import net.minecraft.world.gen.StructureWeightSampler;
 import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
 import net.minecraft.world.gen.chunk.GenerationShapeConfig;
 import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
-import net.minecraft.util.math.*;
-import net.minecraft.world.chunk.ChunkSection;
-
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -34,9 +37,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.OptionalInt;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
-import jpg.k.simplyimprovedterrain.mixinapi.ISimplexNoiseSampler;
-import jpg.k.simplyimprovedterrain.util.noise.NeoNotchNoise;
 
 @Mixin(NoiseChunkGenerator.class)
 public class MixinNoiseChunkGenerator {
@@ -114,6 +114,7 @@ public class MixinNoiseChunkGenerator {
 
         // Seed all the noise octaves.
         ChunkRandom chunkRandom = new ChunkRandom(seed);
+        chunkRandom.skip(18340); // 16+16+8+4+16 octaves, * 262 RNG skips per octave, to bring us to generate the same noise we had in 1.16
         newNoiseOctaves1 = new NeoNotchNoise[N_OCTAVES_PRIMARY];
         newNoiseOctaves2 = new NeoNotchNoise[N_OCTAVES_PRIMARY];
         newNoiseOctavesBlend = new NeoNotchNoise[N_OCTAVES_BLEND];
@@ -147,7 +148,7 @@ public class MixinNoiseChunkGenerator {
         class_6350 aquiferSampler = this.method_36386(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
 
         // Setup to generate this column.
-        ChunkLocalTerrainContext chunkContext = new ChunkLocalTerrainContext(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
+        ChunkLocalTerrainContext chunkContext = ChunkLocalTerrainContext.Create(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
         SimplyImprovedNoiseColumnSampler.ColumnSamplingContext columnContext = this.newNoiseColumnSampler.columnSamplingContextThreadLocal();
         columnContext.setChunkFields(chunkContext, StructureWeightSampler.INSTANCE);
         columnContext.setXZ(x & 15, z & 15);
@@ -185,7 +186,7 @@ public class MixinNoiseChunkGenerator {
         class_6350 aquiferSampler = this.method_36386(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
         //DoubleFunction<BlockSource> oreVeinSampler = this.method_36387(i, chunkPos, consumer);
         //DoubleFunction<class_6357> thisMustBeNoodleCaves = this.method_36462(i, chunkPos, consumer);
-        ChunkLocalTerrainContext chunkContext = new ChunkLocalTerrainContext(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
+        ChunkLocalTerrainContext chunkContext = ChunkLocalTerrainContext.Create(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
         SimplyImprovedNoiseColumnSampler.ColumnSamplingContext columnContext = this.newNoiseColumnSampler.columnSamplingContextThreadLocal();
         columnContext.setChunkFields(chunkContext, structureWeightSampler);
 
@@ -193,8 +194,6 @@ public class MixinNoiseChunkGenerator {
         int yBottomOffset = vanillaNoiseGridMinY * this.verticalNoiseResolution;
 
         BlockPos.Mutable currentBlockPos = new BlockPos.Mutable();
-
-        long current = System.nanoTime();
 
         // This loop works with the nested loop for the chunk section Y range.
         // The "ys = y" update statement updates "ys" with the beginning of the next chunk section.
@@ -242,20 +241,7 @@ public class MixinNoiseChunkGenerator {
             }
         }
 
-        long elapsed = System.nanoTime() - current;
-        t(elapsed);
-
         cir.setReturnValue(chunk);
-    }
-
-    long totalNanoTime = 0;
-    int nChunks = 0;
-    private synchronized void t(long t) {
-        totalNanoTime += t;
-        nChunks ++;
-        if ((nChunks & 31) == 0) {
-            System.out.println(totalNanoTime / (nChunks * 1_000_000_000d));
-        }
     }
 
     @Shadow
