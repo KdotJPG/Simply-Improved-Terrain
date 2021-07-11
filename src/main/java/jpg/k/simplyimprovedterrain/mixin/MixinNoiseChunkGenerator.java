@@ -149,7 +149,7 @@ public class MixinNoiseChunkGenerator {
         // Setup to generate this column.
         ChunkLocalTerrainContext chunkContext = new ChunkLocalTerrainContext(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
         SimplyImprovedNoiseColumnSampler.ColumnSamplingContext columnContext = this.newNoiseColumnSampler.columnSamplingContextThreadLocal();
-        columnContext.setChunkLocalTerrainContext(chunkContext);
+        columnContext.setChunkFields(chunkContext, StructureWeightSampler.INSTANCE);
         columnContext.setXZ(x & 15, z & 15);
 
         int yTop = vanillaNoiseGridSizeY * this.verticalNoiseResolution - 1;
@@ -187,7 +187,7 @@ public class MixinNoiseChunkGenerator {
         //DoubleFunction<class_6357> thisMustBeNoodleCaves = this.method_36462(i, chunkPos, consumer);
         ChunkLocalTerrainContext chunkContext = new ChunkLocalTerrainContext(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
         SimplyImprovedNoiseColumnSampler.ColumnSamplingContext columnContext = this.newNoiseColumnSampler.columnSamplingContextThreadLocal();
-        columnContext.setChunkLocalTerrainContext(chunkContext);
+        columnContext.setChunkFields(chunkContext, structureWeightSampler);
 
         int yTop = vanillaNoiseGridSizeY * this.verticalNoiseResolution - 1;
         int yBottomOffset = vanillaNoiseGridMinY * this.verticalNoiseResolution;
@@ -217,8 +217,9 @@ public class MixinNoiseChunkGenerator {
                         // Computes only the necessary noise layers to resolve what this block should be.
                         double noiseSignValue = columnContext.sampleNoiseSign(y);
 
+                        // StructureWeightSampler.INSTANCE used in place of actual sampler, because it's handled in columnContext.sampleNoiseSign(y);
                         // TODO replace (BlockSource)this.deepslateSource, (class_6357)class_6357.field_33652 with completed samplers for this mod
-                        BlockState blockState = this.getBlockState(structureWeightSampler, aquiferSampler, (BlockSource) this.deepslateSource, (class_6357) class_6357.field_33652, x, y, z, noiseSignValue);
+                        BlockState blockState = this.getBlockState(StructureWeightSampler.INSTANCE, aquiferSampler, (BlockSource) this.deepslateSource, (class_6357) class_6357.field_33652, worldX, y, worldZ, noiseSignValue);
 
                         if (blockState != AIR) {
                             if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {

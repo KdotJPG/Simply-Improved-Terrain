@@ -1,9 +1,11 @@
 package jpg.k.simplyimprovedterrain.terrain;
 
 import java.lang.ThreadLocal;
+import java.sql.Struct;
 
 import net.minecraft.util.math.noise.SimplexNoiseSampler;
 import net.minecraft.world.biome.source.BiomeSource;
+import net.minecraft.world.gen.StructureWeightSampler;
 import net.minecraft.world.gen.chunk.GenerationShapeConfig;
 import org.jetbrains.annotations.Nullable;
 
@@ -89,15 +91,17 @@ public class SimplyImprovedNoiseColumnSampler {
         private int worldX, worldZ;
         private double depth, inverseScale;
         private ChunkLocalTerrainContext chunkLocalTerrainContext;
+        private StructureWeightSampler structureWeightSampler;
 
         private ColumnSamplingContext() {
             
         }
 
-        public void setChunkLocalTerrainContext(ChunkLocalTerrainContext chunkLocalTerrainContext) {
+        public void setChunkFields(ChunkLocalTerrainContext chunkLocalTerrainContext, StructureWeightSampler structureWeightSampler) {
             this.chunkWorldX = chunkLocalTerrainContext.getChunkWorldX();
             this.chunkWorldZ = chunkLocalTerrainContext.getChunkWorldZ();
             this.chunkLocalTerrainContext = chunkLocalTerrainContext;
+            this.structureWeightSampler = structureWeightSampler;
         }
 
         public void setXZ(int x, int z) {
@@ -110,6 +114,7 @@ public class SimplyImprovedNoiseColumnSampler {
         public double sampleNoiseSign(int y) {
             double thresholdingValue = calcThresholdingValue(y, depth, inverseScale);
             thresholdingValue = applyThresholdSlides(y, thresholdingValue);
+            thresholdingValue += this.structureWeightSampler.getWeight(worldX, y, worldZ) * 400.0;
             double noiseSignValue = noise.sampleNoiseSign(thresholdingValue, worldX, y, worldZ);
             // TODO noise caves & corresponding conditional noise layer skipping.
             return noiseSignValue;
