@@ -7,8 +7,6 @@ import jpg.k.simplyimprovedterrain.terrain.SimplyImprovedTerrainNoiseSampler;
 import jpg.k.simplyimprovedterrain.util.noise.NeoNotchNoise;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.class_6350;
-import net.minecraft.class_6357;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -22,9 +20,7 @@ import net.minecraft.world.gen.BlockSource;
 import net.minecraft.world.gen.ChunkRandom;
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.StructureWeightSampler;
-import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
-import net.minecraft.world.gen.chunk.GenerationShapeConfig;
-import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
+import net.minecraft.world.gen.chunk.*;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -145,7 +141,7 @@ public class MixinNoiseChunkGenerator {
         ChunkPos chunkPos = new ChunkPos(chunkX, chunkZ);
         int chunkWorldX = chunkPos.getStartX();
         int chunkWorldZ = chunkPos.getStartZ();
-        class_6350 aquiferSampler = this.method_36386(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
+        AquiferSampler aquiferSampler = this.createBlockSampler(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
 
         // Setup to generate this column.
         ChunkLocalTerrainContext chunkContext = ChunkLocalTerrainContext.Create(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
@@ -162,7 +158,7 @@ public class MixinNoiseChunkGenerator {
             // Computes only the necessary noise layers to resolve what this block should be.
             double noiseSignValue = columnContext.sampleNoiseSign(yy);
 
-            BlockState blockState = this.getBlockState(StructureWeightSampler.INSTANCE, aquiferSampler, (BlockSource) this.deepslateSource, (class_6357) class_6357.field_33652, x, yy, z, noiseSignValue);
+            BlockState blockState = this.getBlockState(StructureWeightSampler.INSTANCE, aquiferSampler, (BlockSource) this.deepslateSource, WeightSampler.DEFAULT, x, yy, z, noiseSignValue);
             if (states != null) {
                 states[y] = blockState;
             }
@@ -183,7 +179,7 @@ public class MixinNoiseChunkGenerator {
         int chunkWorldX = chunkPos.getStartX();
         int chunkWorldZ = chunkPos.getStartZ();
         StructureWeightSampler structureWeightSampler = new StructureWeightSampler(accessor, chunk);
-        class_6350 aquiferSampler = this.method_36386(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
+        AquiferSampler aquiferSampler = this.createBlockSampler(vanillaNoiseGridMinY, vanillaNoiseGridSizeY, chunkPos);
         //DoubleFunction<BlockSource> oreVeinSampler = this.method_36387(i, chunkPos, consumer);
         //DoubleFunction<class_6357> thisMustBeNoodleCaves = this.method_36462(i, chunkPos, consumer);
         ChunkLocalTerrainContext chunkContext = ChunkLocalTerrainContext.Create(chunkWorldX, chunkWorldZ, this.seed, this.biomeSource, this.generationShapeConfig, this.islandNoisePermutationTable);
@@ -218,7 +214,7 @@ public class MixinNoiseChunkGenerator {
 
                         // StructureWeightSampler.INSTANCE used in place of actual sampler, because it's handled in columnContext.sampleNoiseSign(y);
                         // TODO replace (BlockSource)this.deepslateSource, (class_6357)class_6357.field_33652 with completed samplers for this mod
-                        BlockState blockState = this.getBlockState(StructureWeightSampler.INSTANCE, aquiferSampler, (BlockSource) this.deepslateSource, (class_6357) class_6357.field_33652, worldX, y, worldZ, noiseSignValue);
+                        BlockState blockState = this.getBlockState(StructureWeightSampler.INSTANCE, aquiferSampler, (BlockSource) this.deepslateSource, WeightSampler.DEFAULT, worldX, y, worldZ, noiseSignValue);
 
                         if (blockState != AIR) {
                             if (blockState.getLuminance() != 0 && chunk instanceof ProtoChunk) {
@@ -245,12 +241,12 @@ public class MixinNoiseChunkGenerator {
     }
 
     @Shadow
-    protected BlockState getBlockState(StructureWeightSampler structures, class_6350 aquiferSampler, BlockSource blockInterpolator, class_6357 arg, int i, int j, int k, double d) {
+    protected BlockState getBlockState(StructureWeightSampler structures, AquiferSampler aquiferSampler, BlockSource blockInterpolator, WeightSampler weightSampler, int i, int j, int k, double d) {
         throw new AssertionError();
     }
 
     @Shadow
-    private class_6350 method_36386(int i, int j, ChunkPos chunkPos) {
+    private AquiferSampler createBlockSampler(int startY, int deltaY, ChunkPos chunkPos) {
         throw new AssertionError();
     }
 

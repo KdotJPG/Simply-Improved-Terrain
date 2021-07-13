@@ -7,6 +7,7 @@ import net.minecraft.world.ChunkRegion;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.biome.source.HorizontalVoronoiBiomeAccessType;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -29,8 +30,8 @@ public class MixinChunkRegion {
     @Shadow
     private @Final long seed;
 
-    @Inject(method = "<init>(Lnet/minecraft/server/world/ServerWorld;Ljava/util/List;)V", at = @At("TAIL"))
-    private void injectConstructor(ServerWorld world, List<Chunk> chunks, CallbackInfo ci) {
+    @Inject(method = "<init>(Lnet/minecraft/server/world/ServerWorld;Ljava/util/List;Lnet/minecraft/world/chunk/ChunkStatus;I)V", at = @At("TAIL"))
+    private void injectConstructor(ServerWorld world, List<Chunk> chunks, ChunkStatus chunkStatus, int i, CallbackInfo ci) {
 
         if (world.getChunkManager().getChunkGenerator() instanceof NoiseChunkGenerator
                 && world.getDimension().getBiomeAccessType() instanceof HorizontalVoronoiBiomeAccessType) {
