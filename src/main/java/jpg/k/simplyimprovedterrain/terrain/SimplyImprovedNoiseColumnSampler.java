@@ -15,6 +15,7 @@ public class SimplyImprovedNoiseColumnSampler {
     private final double effectiveThresholdMultiplier;
     private final double effectiveThresholdOffset;
     private final double[] thresholdSlideModifiers;
+    private final int minimumY;
 
     public SimplyImprovedNoiseColumnSampler(BiomeSource biomeSource, double inverseVerticalNoiseResolution, int noiseSizeY, GenerationShapeConfig config, SimplyImprovedTerrainNoiseSampler noise/*, OctavePerlinNoiseSampler densityNoise, class_6357 arg */) {
         this.biomeSource = biomeSource;
@@ -36,11 +37,12 @@ public class SimplyImprovedNoiseColumnSampler {
         double bottomSlideTarget = (double)config.getBottomSlide().getTarget();
         double bottomSlideSize = (double)config.getBottomSlide().getSize();
         double bottomSlideOffset = (double)config.getBottomSlide().getOffset();
+        this.minimumY = config.getMinimumY();
         int generationHeight = config.getHeight();
         thresholdSlideModifiers = new double[generationHeight];
         for (int y = 0; y < generationHeight; y++) {
             double thresholdSlideModifier = 0;
-            double yb = y * inverseVerticalNoiseResolution;
+            double yb = (y + this.minimumY) * inverseVerticalNoiseResolution;
 
             if (topSlideSize > 0) {
                 double tBase = ((noiseSizeY - yb) - topSlideOffset);
@@ -129,7 +131,7 @@ public class SimplyImprovedNoiseColumnSampler {
     }
 
     private double applyThresholdSlides(int y, double thresholdingValue) {
-        return thresholdingValue + this.thresholdSlideModifiers[y];
+        return thresholdingValue + this.thresholdSlideModifiers[y - this.minimumY];
     }
 
 
