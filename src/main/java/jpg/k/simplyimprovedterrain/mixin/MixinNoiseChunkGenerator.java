@@ -168,7 +168,7 @@ public class MixinNoiseChunkGenerator {
                 return;
             }
         }
-        cir.cancel();
+        cir.setReturnValue(OptionalInt.of(0));
     }
 
     @Inject(method = "populateNoise(Lnet/minecraft/world/gen/StructureAccessor;Lnet/minecraft/world/chunk/Chunk;II)Lnet/minecraft/world/chunk/Chunk;", at = @At("HEAD"), cancellable = true)
