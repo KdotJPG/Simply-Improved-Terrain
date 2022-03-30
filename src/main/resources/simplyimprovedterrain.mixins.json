@@ -5,13 +5,13 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "simplyimprovedterrain.refmap.json",
   "mixins": [
-    "MixinNoiseChunkGenerator",
-    "MixinEndBiomeProvider",
     "MixinAbstractSphereReplaceConfig",
-    "MixinWorldGenRegion",
+    "MixinEndBiomeProvider",
+    "MixinImprovedNoiseGenerator",
+    "MixinNoiseChunkGenerator",
+    "MixinRuinedPortalPiece",
     "MixinSimplexNoiseGenerator",
-    "MixinNotchNoiseGenerator",
-    "MixinRuinedPortalPiece"
+    "MixinWorldGenRegion"
   ],
   "injectors": {
     "defaultRequire": 1

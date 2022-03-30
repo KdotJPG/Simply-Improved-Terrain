@@ -34,7 +34,7 @@ public class MixinAbstractSphereReplaceConfig {
         // It's similar to the recommendation to use N.5 radii, in this article:
         // - https://www.redblobgames.com/grids/circle-drawing/
         // except it also avoids the 3x3 square without requiring a special case.
-        float radius = radiusBase + 0.41421356f; // Optimize appearance
+        float radius = radiusBase + 0.41421356f;
 
         // In the actual loop, we will only work with ints, so we can convert now.
         int radiusSqInt = (int)(radius * radius);

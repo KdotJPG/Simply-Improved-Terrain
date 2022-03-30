@@ -17,14 +17,13 @@ public enum CachedScatteredBiomeMagnifier implements IBiomeMagnifier {
     private static final double SCATTERED_BLENDER_PADDING = 4.0;
 
     private static final ScatteredBiomeBlender scatteredBiomeBlender = new ScatteredBiomeBlender(SCATTERED_BLENDER_FREQUENCY, SCATTERED_BLENDER_PADDING, 16);
-    private static final int gridPadding = (int)Math.ceil(scatteredBiomeBlender.getInternalBlendRadius() * 0.25) + 3; // TODO is 3 too much?
+    private static final int gridPadding = (int)Math.ceil(scatteredBiomeBlender.getInternalBlendRadius() * 0.25) + 3; // 3 could be more than needed. Might revisit.
     private static final int paddedGridWidth = 5 + 2 * gridPadding; // 1/4 chunk width, +1 for end bounds, + gridPadding on each side
     private static final int paddedGridWidthSq = paddedGridWidth * paddedGridWidth;
 
     private static LinkedHashCache<ProviderCoordinate, Biome[]> cache = new LinkedHashCache<>(N_ACTIVEMOST_NODES, CACHE_MAX_SIZE);
 
-    private void CachedScatteredBiomeMagnifier() {
-    }
+    private void CachedScatteredBiomeMagnifier() { }
 
     public Biome getBiome(long seed, int x, int y, int z, BiomeManager.IBiomeReader biomeReader) {
         ProviderCoordinate key = new ProviderCoordinate(biomeReader, seed, x & (int)0xFFFFFFF0, z & (int)0xFFFFFFF0);

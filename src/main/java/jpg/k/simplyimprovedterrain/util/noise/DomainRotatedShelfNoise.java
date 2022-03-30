@@ -1,10 +1,10 @@
 package jpg.k.simplyimprovedterrain.util.noise;
 
 /**
- * K.jpg's Neo-Notch Noise.
- * To serve as replacement for Minecraft's "Notch noise". This produces discontinuities to create shelf effects,
- * but it also eliminates the visible square alignment in X/Z slices, and varies the spacing of the shelves.
- * It also takes a smoothing factor, to eliminate the need for interpolation to smooth the discontinuities.
+ * K.jpg's Domain-Rotated Shelf Noise.
+ * To serve as replacement for Minecraft's terrain noise. This produces discontinuities to create shelf effects,
+ * but it eliminates the visible square alignment in X/Z slices and varies the spacing of the shelves locally.
+ * It also takes a smoothing factor to eliminate the need for interpolation to smooth the discontinuities.
  *
  * Perlin grid alignment is hidden by using a domain rotation so that Y points up the main diagonal of the noise.
  * The shelves are oriented perpendicular to this axis, then are either given an upward offset or are omitted.
@@ -12,14 +12,14 @@ package jpg.k.simplyimprovedterrain.util.noise;
  * 
  * Always domain-rotate your Perlin, folks.
  */
-public class NeoNotchNoise {
+public class DomainRotatedShelfNoise {
 
     private static final int PSIZE = 2048;
     private static final int PMASK = 2047;
 
     private short[] perm;
 
-    public NeoNotchNoise(long seed) {
+    public DomainRotatedShelfNoise(long seed) {
         perm = new short[PSIZE];
         short[] source = new short[PSIZE];
         for (short i = 0; i < PSIZE; i++)
@@ -34,7 +34,7 @@ public class NeoNotchNoise {
         }
     }
 
-    public NeoNotchNoise(java.util.Random rand) {
+    public DomainRotatedShelfNoise(java.util.Random rand) {
         perm = new short[PSIZE];
         short[] source = new short[PSIZE];
         for (short i = 0; i < PSIZE; i++)

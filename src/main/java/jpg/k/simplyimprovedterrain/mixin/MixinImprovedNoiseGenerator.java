@@ -11,7 +11,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.gen.ImprovedNoiseGenerator;
 
 @Mixin(ImprovedNoiseGenerator.class)
-public class MixinNotchNoiseGenerator {
+public class MixinImprovedNoiseGenerator {
 
     @Shadow
     public @Final double xCoord;

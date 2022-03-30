@@ -6,8 +6,7 @@ import java.io.*;
 import javax.swing.*;
 import java.util.ArrayList;
 
-public class MetaballEndIslandNoise
-{
+public class MetaballEndIslandNoise {
 
     private static final double TRIANGLE_EDGE_LENGTH = Math.sqrt(2.0 / 3.0);
     private static final double TRIANGLE_HEIGHT = Math.sqrt(1.0 / 2.0);
