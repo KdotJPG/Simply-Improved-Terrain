@@ -19,39 +19,51 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MixinEndBiomeProvider {
 
     @Shadow
-    private @Final Biome field_242641_i;
+    private @Final Biome end;
 
     @Shadow
-    private @Final Biome field_242642_j;
+    private @Final Biome highlands;
 
     @Shadow
-    private @Final Biome field_242643_k;
+    private @Final Biome midlands;
 
     @Shadow
-    private @Final Biome field_242644_l;
+    private @Final Biome islands;
 
     @Shadow
-    private @Final Biome field_242645_m;
+    private @Final Biome barrens;
 
     @Shadow
-    private @Final SimplexNoiseGenerator generator;
-    
-    // Must be Overwrite for other mods (e.g. Abnormals Core) to mix into its return statements instead of only Vanilla's.
+    private @Final SimplexNoiseGenerator islandNoise;
+
+    /**
+     * @author K.jpg
+     * @reason Match replacement end island noise.
+     */
     @Overwrite
     public Biome getNoiseBiome(int biomeX, int biomeY, int biomeZ) {
         if ((long)biomeX * (long)biomeX + (long)biomeZ * (long)biomeZ <= 0x10000L) {
-            return this.field_242641_i;
+            return this.end;
         } else {
-            double f = MetaballEndIslandNoise.INSTANCE.getNoise(((ISimplexNoiseGenerator)(Object)generator).getPermTable(), biomeX * 4 + 2, biomeZ * 4 + 2);
-            return f > 40.0F?this.field_242642_j:(f >= 0.0F?this.field_242643_k:(f < -20.0F?this.field_242644_l:this.field_242645_m));
+            double f = MetaballEndIslandNoise.INSTANCE.getNoise(((ISimplexNoiseGenerator)islandNoise).getPermTable(), biomeX * 4 + 2, biomeZ * 4 + 2);
+            if (f > 40.0F) {
+                return this.highlands;
+            } else if (f >= 0.0F) {
+                return this.midlands;
+            } else {
+                return f < -20.0F ? this.islands : this.barrens;
+            }
         }
     }
 
-    @Inject(method = "func_235317_a_", at = @At("HEAD"), cancellable = true)
-    private static void inject_func_235317_a_(SimplexNoiseGenerator simplex, int biomeX, int biomeZ, CallbackInfoReturnable<Float> cir) {
-        float f = (float)MetaballEndIslandNoise.INSTANCE.getNoise(((ISimplexNoiseGenerator)(Object)simplex).getPermTable(), biomeX * 8, biomeZ * 8);
-        cir.setReturnValue(f);
-        cir.cancel();
+    /**
+     * @author K.jpg
+     * @reason Replacement end island noise.
+     */
+    @Overwrite
+    public static float getHeightValue(SimplexNoiseGenerator simplex, int biomeX, int biomeZ) {
+        int[] permTable = ((ISimplexNoiseGenerator) simplex).getPermTable();
+        return (float)MetaballEndIslandNoise.INSTANCE.getNoise(permTable, biomeX * 8, biomeZ * 8);
     }
 
 }

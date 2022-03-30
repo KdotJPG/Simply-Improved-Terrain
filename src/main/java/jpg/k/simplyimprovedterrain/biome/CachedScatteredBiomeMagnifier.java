@@ -88,7 +88,7 @@ public enum CachedScatteredBiomeMagnifier implements IBiomeMagnifier {
                     double distSq = (rz - z) * (rz - z) + (rx - x) * (rx - x);
                     if (distSq >= closestRiverTileDistSq) continue;
                     Biome thisBiome = lookupGrid[(rz + (gridPadding - worldChunkZScaled)) * paddedGridWidth + (rx + (gridPadding - worldChunkXScaled))];
-                    if (thisBiome.getCategory() != Biome.Category.RIVER) continue;
+                    if (thisBiome.getBiomeCategory() != Biome.Category.RIVER) continue;
                     biome = thisBiome;
                     closestRiverTileDistSq = distSq;
                 }
