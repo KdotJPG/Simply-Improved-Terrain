@@ -28,7 +28,7 @@ public class MixinAbstractSphereReplaceConfig {
         int radiusRange = configuredRadius >> 1;
 
         // Choose the radius
-        int radiusBase = p_241855_3_.nextInt(radiusRange) + radiusMin;
+        int radiusBase = (radiusRange < 1 ? 0 : p_241855_3_.nextInt(radiusRange)) + radiusMin;
 
         // An offset of slightly less than sqrt2-1 improves visual results.
         // It's similar to the recommendation to use N.5 radii, in this article:
