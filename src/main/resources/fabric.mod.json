@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "simplyimprovedterrain",
+  "version": "${version}",
+
+  "name": "Simply Improved Terrain",
+  "description": "Rewrites terrain generation components in Minecraft to improve their visual results.",
+  "authors": [
+    "K.jpg"
+  ],
+  "contact": {
+    "homepage": "https://github.com/KdotJPG",
+    "sources": "https://github.com/KdotJPG/Simply-Improved-Terrain"
+  },
+
+  "license": "MIT License",
+  "icon": "assets/simplyimprovedterrain/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "jpg.k.simplyimprovedterrain.SimplyImprovedTerrain"
+    ]
+  },
+  "mixins": [
+    "simplyimprovedterrain.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.13.3",
+    "fabric": "*",
+    "minecraft": "1.18.x",
+    "java": ">=17"
+  },
+  "suggests": {
+    "another-mod": "*"
+  },
+  "custom": {
+    "lithium:options": {
+      "mixin.gen.fast_island_noise": false
+    }
+  }
+}
