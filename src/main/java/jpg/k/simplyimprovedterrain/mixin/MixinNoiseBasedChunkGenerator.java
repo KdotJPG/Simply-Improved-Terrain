@@ -39,9 +39,42 @@ public class MixinNoiseBasedChunkGenerator {
     }
 
     @Inject(method = "iterateNoiseColumn(II[Lnet/minecraft/world/level/block/state/BlockState;Ljava/util/function/Predicate;II)Ljava/util/OptionalInt;", at = @At("HEAD"), cancellable = true)
-    private void injectIterateNoiseColumn(int i, int j, @Nullable BlockState[] blockStates, @Nullable Predicate<BlockState> predicate, int k, int l, CallbackInfoReturnable<OptionalInt> callbackInfo) {
-        // TODO
-        if (blockStates != null) for (int q = 0; q < blockStates.length; q++) blockStates[q] = AIR;
+    private void injectIterateNoiseColumn(int worldX, int worldZ, @Nullable BlockState[] blockStates, @Nullable Predicate<BlockState> predicate, int cellNoiseMinY, int cellCountY, CallbackInfoReturnable<OptionalInt> callbackInfo) {
+
+        NoiseSettings noiseSettings = this.settings.value().noiseSettings();
+        int cellWidth = noiseSettings.getCellWidth();
+        int cellHeight = noiseSettings.getCellHeight();
+        int cellIndexX = Math.floorDiv(worldX, cellWidth);
+        int cellIndexZ = Math.floorDiv(worldZ, cellWidth);
+        int inCellX = Math.floorMod(worldX, cellWidth);
+        int inCellZ = Math.floorMod(worldZ, cellWidth);
+        int cellBaseX = cellIndexX * cellWidth;
+        int cellBaseZ = cellIndexZ * cellWidth;
+
+        NoiseChunk noiseChunk = NoiseChunk.forColumn(cellBaseX, cellBaseZ, cellNoiseMinY, cellCountY, this.router, this.settings.value(), this.globalFluidPicker);
+        IMixinNoiseChunk mixinNoiseChunk = (IMixinNoiseChunk)(Object)noiseChunk;
+        mixinNoiseChunk.setLocalXZ(inCellX, inCellZ);
+
+        int ySize = cellCountY * cellHeight;
+        int yBottomOffset = cellNoiseMinY * cellHeight;
+
+        // Have to split into two loops for now, because IrreguLerper only runs upward.
+        // TODO fix this in the future, either by supporting both directions or refactoring to run downward.
+        if (blockStates == null) blockStates = new BlockState[ySize];
+        for (int y = yBottomOffset; y < ySize + yBottomOffset; y++) {
+            mixinNoiseChunk.setGlobalY(y);
+            BlockState blockState = noiseChunk.getInterpolatedState();
+            blockStates[y - yBottomOffset] = blockState == null ? this.defaultBlock : blockState;
+        }
+        for (int y = ySize + yBottomOffset - 1; y >= yBottomOffset; y--) {
+            if (predicate != null && predicate.test(blockStates[y - yBottomOffset])) {
+                noiseChunk.stopInterpolation();
+                callbackInfo.setReturnValue(OptionalInt.of(y + 1));
+                return;
+            }
+        }
+
+        noiseChunk.stopInterpolation();
         callbackInfo.setReturnValue(OptionalInt.empty());
     }
 
@@ -56,7 +89,7 @@ public class MixinNoiseBasedChunkGenerator {
         int chunkWorldX = chunkPos.getMinBlockX();
         int chunkWorldZ = chunkPos.getMinBlockZ();
         int cellHeight = noiseSettings.getCellHeight();
-        int yTop = vanillaNoiseGridSizeY * cellHeight;
+        int ySize = vanillaNoiseGridSizeY * cellHeight;
         int yBottomOffset = vanillaNoiseGridMinY * cellHeight;
 
         // Initialize for generation
@@ -81,7 +114,7 @@ public class MixinNoiseBasedChunkGenerator {
                 // Iterate up column.
                 LevelChunkSection chunkSection = null;
                 int chunkSectionYTop = Integer.MIN_VALUE;
-                for (int y = yBottomOffset; y < yTop + yBottomOffset; y++) {
+                for (int y = yBottomOffset; y < ySize + yBottomOffset; y++) {
                     if (y >= chunkSectionYTop) {
                         int chunkSectionIndex = chunkAccess.getSectionIndex(y);
                         chunkSection = chunkAccess.getSection(chunkSectionIndex);
