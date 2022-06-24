@@ -5,9 +5,12 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "MixinBaseDiskFeature",
+    "MixinBiomeManager",
     "MixinBlendedNoise",
+    "MixinClimateSampler",
     "MixinDensityFunctions",
     "MixinDeprecatedNoise",
+    "MixinMultiNoiseBiomeSource",
     "MixinNoiseBasedChunkGenerator",
     "MixinNoiseChunk",
     "MixinNoiseRouterData",

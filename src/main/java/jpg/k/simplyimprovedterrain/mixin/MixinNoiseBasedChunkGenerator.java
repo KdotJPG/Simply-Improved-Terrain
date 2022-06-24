@@ -1,24 +1,34 @@
 package jpg.k.simplyimprovedterrain.mixin;
 
+import jpg.k.simplyimprovedterrain.biome.FiddledBiomeResolver;
+import jpg.k.simplyimprovedterrain.biome.WrappedFiddledBiomeResolver;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinNoiseChunk;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.StructureFeatureManager;
+import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.biome.BiomeResolver;
+import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.levelgen.*;
 import net.minecraft.world.level.levelgen.blending.Blender;
+import net.minecraft.world.level.levelgen.structure.StructureSet;
+import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.OptionalInt;
@@ -28,14 +38,22 @@ import java.util.function.Predicate;
 public class MixinNoiseBasedChunkGenerator {
 
     @Shadow @Final private static BlockState AIR;
-    @Shadow @Final private Holder<NoiseGeneratorSettings> settings;
+    @Shadow @Final protected Holder<NoiseGeneratorSettings> settings;
     @Shadow @Final private Aquifer.FluidPicker globalFluidPicker;
     @Shadow @Final protected BlockState defaultBlock;
     @Shadow @Final private NoiseRouter router;
 
+    private BiomeResolver possiblyFiddledBiomeResolver;
+
     @Shadow
     private BlockState debugPreliminarySurfaceLevel(NoiseChunk noiseChunk, int i, int j, int k, BlockState blockState) {
         throw new NotImplementedException();
+    }
+
+    @Inject(method = "<init>(Lnet/minecraft/core/Registry;Lnet/minecraft/core/Registry;Lnet/minecraft/world/level/biome/BiomeSource;Lnet/minecraft/world/level/biome/BiomeSource;JLnet/minecraft/core/Holder;)V", at = @At("TAIL"))
+    private void injectConstructor(Registry<StructureSet> registry, Registry<NormalNoise.NoiseParameters> registry2, BiomeSource biomeSource, BiomeSource runtimeBiomeSource, long seed, Holder<NoiseGeneratorSettings> holder, CallbackInfo callbackInfo) {
+        this.possiblyFiddledBiomeResolver = (runtimeBiomeSource instanceof FiddledBiomeResolver fiddledBiomeSource) ?
+                new WrappedFiddledBiomeResolver(fiddledBiomeSource, BiomeManager.obfuscateSeed(seed)) : runtimeBiomeSource;
     }
 
     @Inject(method = "iterateNoiseColumn(II[Lnet/minecraft/world/level/block/state/BlockState;Ljava/util/function/Predicate;II)Ljava/util/OptionalInt;", at = @At("HEAD"), cancellable = true)
@@ -152,5 +170,17 @@ public class MixinNoiseBasedChunkGenerator {
         callbackInfo.setReturnValue(chunkAccess);
     }
 
+    /**
+     * @author K.jpg
+     * @reason Sample 'fiddled' biome positions where possible, following BiomeManager's displacement process.
+     */
+    @Overwrite
+    private void doCreateBiomes(Blender blender, StructureFeatureManager structureFeatureManager, ChunkAccess chunkAccess) {
+        NoiseChunk noiseChunk = chunkAccess.getOrCreateNoiseChunk(this.router, () -> {
+            return new Beardifier(structureFeatureManager, chunkAccess);
+        }, this.settings.value(), this.globalFluidPicker, blender);
+        BiomeResolver biomeResolver = BelowZeroRetrogen.getBiomeResolver(blender.getBiomeResolver(this.possiblyFiddledBiomeResolver), chunkAccess);
+        chunkAccess.fillBiomesFromNoise(biomeResolver, noiseChunk.cachedClimateSampler(this.router));
+    }
 
 }
