@@ -11,6 +11,8 @@ import net.minecraft.world.level.levelgen.synth.BlendedNoise;
 import net.minecraft.world.level.levelgen.synth.ImprovedNoise;
 import net.minecraft.world.level.levelgen.synth.PerlinNoise;
 
+import java.util.Objects;
+
 import static net.minecraft.core.Registry.register;
 
 public class SplitBlendedNoise {
@@ -74,6 +76,19 @@ public class SplitBlendedNoise {
 
         public DensityFunction mainNoise() {
             return mainNoise;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            BlendedNoiseCombine that = (BlendedNoiseCombine) o;
+            return minLimitNoise.equals(that.minLimitNoise) && maxLimitNoise.equals(that.maxLimitNoise) && mainNoise.equals(that.mainNoise);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(minLimitNoise, maxLimitNoise, mainNoise);
         }
 
         public static final Codec<BlendedNoiseCombine> CODEC = RecordCodecBuilder.create((instance) -> {
@@ -207,7 +222,21 @@ public class SplitBlendedNoise {
         }
 
         public Type type() { return this.type; }
+
         public BlendedNoise blendedNoise() { return this.blendedNoise; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            BlendedNoisePart that = (BlendedNoisePart) o;
+            return Double.compare(that.xzScaleTrue, xzScaleTrue) == 0 && Double.compare(that.yScaleTrue, yScaleTrue) == 0 && Double.compare(that.yScale, yScale) == 0 && Double.compare(that.maxValue, maxValue) == 0 && noise.equals(that.noise) && blendedNoise.equals(that.blendedNoise) && type == that.type;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(noise, xzScaleTrue, yScaleTrue, yScale, maxValue, blendedNoise, type);
+        }
 
         @Override
         public DensityFunction mapAll(Visitor visitor) {

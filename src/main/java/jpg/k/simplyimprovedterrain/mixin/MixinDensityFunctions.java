@@ -22,6 +22,7 @@ public class MixinDensityFunctions {
             Registry.register(Registry.DENSITY_FUNCTION_TYPES, blendedNoisePartType.getSerializedName(), blendedNoisePartType.codec);
         }
         Registry.register(Registry.DENSITY_FUNCTION_TYPES, "smooth_min", CustomMathDensityFunctions.SmoothMin.CODEC);
+        Registry.register(Registry.DENSITY_FUNCTION_TYPES, "smooth_range_choice", CustomMathDensityFunctions.SmoothRangeChoice.CODEC);
     }
 
 }

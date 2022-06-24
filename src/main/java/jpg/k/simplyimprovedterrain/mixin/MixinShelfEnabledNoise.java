@@ -22,7 +22,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * https://noiseposti.ng/posts/2022-01-16-The-Perlin-Problem-Moving-Past-Square-Noise.html#domain-rotation
  */
 @Mixin(ImprovedNoise.class)
-public abstract class MixinDeprecatedNoise {
+public abstract class MixinShelfEnabledNoise {
+
+    private static final double ROOT3OVER2 = 0.8660254037844386;
+    private static final double ROOT3OVER3 = 0.577350269189626;
+    private static final double ROTATE_ORTHOGONALIZER = -0.211324865405187;
 
     @Shadow protected abstract double sampleAndLerp(int xb, int yb, int zb, double dx, double dy, double dz, double dy2);
     @Shadow protected abstract int p(int i);
@@ -33,29 +37,43 @@ public abstract class MixinDeprecatedNoise {
     @Inject(method = "noise(DDDDD)D", at = @At("HEAD"), cancellable = true)
     public void injectNoise(double x, double y, double z, double shelfParam1, double shelfParam2, CallbackInfoReturnable<Double> cir) {
 
-        // Domain Rotation! Remove the square slices from the main XZ world plane.
-        // Always domain-rotate your Perlin, folks.
-        // https://noiseposti.ng/posts/2022-01-16-The-Perlin-Problem-Moving-Past-Square-Noise.html#domain-rotation
-        double xz = x + z;
-        double s2 = xz * -0.211324865405187;
-        double yy = y * 0.577350269189626;
-        x += s2 + yy;
-        z += s2 + yy;
-        y = xz * -0.577350269189626 + yy;
-
         // Random-offsetting is a bit redundant given the noise is already seeded.
-        // Either it offers no effective variation (then wouldn't be needed)
-        // or offers seed-global variation (instead, let us strive for local variation by design!)
+        // Either it offers no effective variation (then wouldn't be needed),
+        // or offers seed-global variation (in the case of the Vanilla shelf effect).
+        // Instead, let us strive for local variation by design!
         //x += this.originX;
         //y += this.originY;
         //z += this.originZ;
 
-        int xb = Mth.floor(x);
-        int yb = Mth.floor(y);
-        int zb = Mth.floor(z);
-        double dx = x - xb;
-        double dy = y - yb;
-        double dz = z - zb;
+        // But actually, there is something to be said about offsetting the noise.
+        // Maybe not randomly, but at least to the center of a noise grid cell.
+        // Noise is zero at (0, 0, 0), so this constant offset gives spawn its variety back.
+        // This offset accounts for the domain rotation below.
+        y += ROOT3OVER2;
+
+        // Domain Rotation! Removes the square-looking slices from the main XZ world plane.
+        // Always domain-rotate your Perlin, folks.
+        // https://noiseposti.ng/posts/2022-01-16-The-Perlin-Problem-Moving-Past-Square-Noise.html#domain-rotation
+        double xz = x + z;
+        double s2 = xz * ROTATE_ORTHOGONALIZER;
+        double yy = y * ROOT3OVER3;
+        x += s2 + yy;
+        z += s2 + yy;
+        y = xz * -ROOT3OVER3 + yy;
+
+        // I *think* using lfloor here will solve the problem that wrap() originally solved.
+        // Pending further testing.
+        long xbl = Mth.lfloor(x);
+        long ybl = Mth.lfloor(y);
+        long zbl = Mth.lfloor(z);
+        double dx = x - xbl;
+        double dy = y - ybl;
+        double dz = z - zbl;
+
+        // Noise internal hash is 256 in size, so we shouldn't need any more processing than this.
+        int xb = (int)xbl;
+        int yb = (int)ybl;
+        int zb = (int)zbl;
 
         double value;
         if (shelfParam1 != 0) value = sampleAndLerpWithNewShelves(xb, yb, zb, dx, dy, dz);
@@ -94,7 +112,7 @@ public abstract class MixinDeprecatedNoise {
         // if we're the decided amount below this vertex contribution.
         if (dx + dy + dz < shelfPosition) return 0;
 
-        // Otherwise do the regular thing.
+        // Otherwise, do the regular thing.
         else return gradDot(hash256, dx, dy, dz);
     }
 

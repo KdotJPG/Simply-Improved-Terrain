@@ -9,13 +9,16 @@
     "MixinBlendedNoise",
     "MixinClimateSampler",
     "MixinDensityFunctions",
-    "MixinDeprecatedNoise",
+    "MixinShelfEnabledNoise",
+    "MixinEndIslandDensityFunction",
     "MixinMultiNoiseBiomeSource",
     "MixinNoiseBasedChunkGenerator",
     "MixinNoiseChunk",
     "MixinNoiseRouterData",
     "MixinPerlinFractalNoise",
-    "MixinRuinedPortalPiece"
+    "MixinRuinedPortalPiece",
+    "MixinSimplexNoise",
+    "MixinTheEndBiomeSource"
   ],
   "client": [
   ],

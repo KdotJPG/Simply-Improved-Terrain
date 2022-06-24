@@ -20,7 +20,7 @@ public class MixinPerlinFractalNoise implements IMixinPerlinFractalNoise {
 
     /**
      * @author: K.jpg
-     * @reason: Undoing wrap to make domain-rotation easier to inject. Will be on the lookout for odd effects far out.
+     * @reason: Undoing wrap to make domain-rotation easier to inject. An alternate solution is included in MixinShelfEnabledNoise.java
      */
     @Overwrite
     public static double wrap(double d) {

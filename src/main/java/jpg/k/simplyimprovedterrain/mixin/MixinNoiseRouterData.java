@@ -42,7 +42,7 @@ public class MixinNoiseRouterData {
 
     /**
      * @author K.jpg
-	 * @reason Simply Improved Terrain
+	 * @reason Separate BlendedNoise into individual interpolation channels.
      */
     @Overwrite
     private static NoiseRouterWithOnlyNoises overworldWithNewCaves(NoiseSettings noiseSettings, boolean isLarge) {
@@ -57,7 +57,6 @@ public class MixinNoiseRouterData {
         DensityFunction factor = getFunction(isLarge ? FACTOR_LARGE : FACTOR);
         DensityFunction depth = getFunction(isLarge ? DEPTH_LARGE : DEPTH);
         DensityFunction densityFunction11 = noiseGradientDensity(DensityFunctions.cache2d(factor), depth);
-
 
         // Three parts that used be blended inside BlendedNoise.java
         DensityFunction blendedNoise = getFunction(BASE_3D_NOISE);
@@ -99,9 +98,9 @@ public class MixinNoiseRouterData {
 
         // Home stretch
         DensityFunction entrancesMultipliedInterpolated = DensityFunctions.interpolated(DensityFunctions.mul(DensityFunctions.constant(5.0D), getFunction(ENTRANCES)));
-        DensityFunction terrainWithEntrances = CustomMathDensityFunctions.SmoothMin.create(slopedNoiseForTerrain, entrancesMultipliedInterpolated, 1.25); // TODO move SmoothMin or rename SplitBlendedNoise
-        DensityFunction terrainWithEntrancesAndCaves = DensityFunctions.rangeChoice(slopedNoiseForTerrain, -1000000.0, 1.5625D, terrainWithEntrances, interpolatedUnderground); // TODO replace with smooth range choice if needed
-        DensityFunction interpolatedTerrainWithNoodles = CustomMathDensityFunctions.SmoothMin.create(postProcessNoInterpolate(noiseSettings, terrainWithEntrancesAndCaves), getFunction(NOODLE), 0.5); // TODO try out SmoothMin for a bit of refinement.
+        DensityFunction terrainWithEntrances = CustomMathDensityFunctions.SmoothMin.create(slopedNoiseForTerrain, entrancesMultipliedInterpolated, 1.25);
+        DensityFunction terrainWithEntrancesAndCaves = CustomMathDensityFunctions.SmoothRangeChoice.create(slopedNoiseForTerrain, -1000000.0, 1.5625D, 0.04, terrainWithEntrances, interpolatedUnderground);
+        DensityFunction interpolatedTerrainWithNoodles = CustomMathDensityFunctions.SmoothMin.create(postProcessNoInterpolate(noiseSettings, terrainWithEntrancesAndCaves), getFunction(NOODLE), 0.03);
 
         /*DensityFunction densityFunction12 = getFunction(isLarge ? SLOPED_CHEESE_LARGE : SLOPED_CHEESE);
         DensityFunction densityFunction13 = DensityFunctions.min(densityFunction12, DensityFunctions.mul(DensityFunctions.constant(5.0D), getFunction(ENTRANCES)));
@@ -129,7 +128,85 @@ public class MixinNoiseRouterData {
 
     /**
      * @author K.jpg
-     * @reason Need this to not lock us to cell coordinates
+     * @reason Separate BlendedNoise into individual interpolation channels.
+     */
+    @Overwrite
+    private static NoiseRouterWithOnlyNoises noNewCaves(NoiseSettings noiseSettings) {
+        DensityFunction domainWarpX = getFunction(SHIFT_X);
+        DensityFunction domainWarpZ = getFunction(SHIFT_Z);
+        DensityFunction warpedTemperature = DensityFunctions.shiftedNoise2d(domainWarpX, domainWarpZ, 0.25, getNoise(Noises.TEMPERATURE));
+        DensityFunction warpedVegetation = DensityFunctions.shiftedNoise2d(domainWarpX, domainWarpZ, 0.25, getNoise(Noises.VEGETATION));
+        DensityFunction densityFunction5 = noiseGradientDensity(DensityFunctions.cache2d(getFunction(FACTOR)), getFunction(DEPTH));
+
+        // Three parts that used be blended inside BlendedNoise.java
+        DensityFunction blendedNoise = getFunction(BASE_3D_NOISE);
+        DensityFunction blendNoiseMain = SplitBlendedNoise.BlendedNoisePart.create(SplitBlendedNoise.BlendedNoisePart.Type.MAIN_NOISE, blendedNoise);
+        DensityFunction blendNoiseMinLimit = SplitBlendedNoise.BlendedNoisePart.create(SplitBlendedNoise.BlendedNoisePart.Type.MIN_LIMIT_NOISE, blendedNoise);
+        DensityFunction blendNoiseMaxLimit = SplitBlendedNoise.BlendedNoisePart.create(SplitBlendedNoise.BlendedNoisePart.Type.MAX_LIMIT_NOISE, blendedNoise);
+
+        // SuperCoder79's optimization re-implemented, with a bit of a buffer due to interpolation.
+        blendNoiseMinLimit = DensityFunctions.rangeChoice(blendNoiseMain, -1000000.0, SplitBlendedNoise.MAIN_NOISE_MAX_TO_EVALUATE_1ST_HALF, blendNoiseMinLimit, DensityFunctions.zero());
+        blendNoiseMaxLimit = DensityFunctions.rangeChoice(blendNoiseMain, SplitBlendedNoise.MAIN_NOISE_MIN_TO_EVALUATE_2ND_HALF,  1000000.0, blendNoiseMaxLimit, DensityFunctions.zero());
+
+        // TODO get around FlatCache if we add ability to disable our wrapNew+IrreguLerper
+        DensityFunction jagged = DensityFunctions.cache2d(DensityFunctions.noise(getNoise(Noises.JAGGED), 1500.0D, 0.0D));
+        DensityFunction slopeForTerrainNoise = slopeForTerrainNoise(
+                getFunction(CONTINENTS), getFunction(EROSION), getFunction(RIDGES),
+                DensityFunctions.cache2d(getFunction(FACTOR)), getFunction(DEPTH), jagged
+        );
+
+        // Individually-interpolated blended noise, directly visible in terrain.
+        DensityFunction blendedNoiseForTerrain = SplitBlendedNoise.BlendedNoiseCombine.create(
+                DensityFunctions.interpolated(blendNoiseMinLimit),
+                DensityFunctions.interpolated(blendNoiseMaxLimit),
+                DensityFunctions.interpolated(blendNoiseMain)
+        );
+        DensityFunction slopedNoiseForTerrain = DensityFunctions.add(slopeForTerrainNoise, blendedNoiseForTerrain);
+        DensityFunction postProcessedTerrain = postProcessNoInterpolate(noiseSettings, slopedNoiseForTerrain);
+        
+        return new NoiseRouterWithOnlyNoises(DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(),
+                warpedTemperature, warpedVegetation, getFunction(CONTINENTS), getFunction(EROSION), getFunction(DEPTH), getFunction(RIDGES),
+                densityFunction5, postProcessedTerrain, DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero());
+    }
+
+    /**
+     * @author K.jpg
+     * @reason Separate BlendedNoise into individual interpolation channels.
+     */
+    @Overwrite
+    public static NoiseRouterWithOnlyNoises end(NoiseSettings noiseSettings) {
+
+        DensityFunction endIslands = DensityFunctions.endIslands(0);
+        DensityFunction endIslandsCached2D = DensityFunctions.cache2d(endIslands);
+
+        // Three parts that used be blended inside BlendedNoise.java
+        DensityFunction blendedNoise = getFunction(BASE_3D_NOISE);
+        DensityFunction blendNoiseMain = SplitBlendedNoise.BlendedNoisePart.create(SplitBlendedNoise.BlendedNoisePart.Type.MAIN_NOISE, blendedNoise);
+        DensityFunction blendNoiseMinLimit = SplitBlendedNoise.BlendedNoisePart.create(SplitBlendedNoise.BlendedNoisePart.Type.MIN_LIMIT_NOISE, blendedNoise);
+        DensityFunction blendNoiseMaxLimit = SplitBlendedNoise.BlendedNoisePart.create(SplitBlendedNoise.BlendedNoisePart.Type.MAX_LIMIT_NOISE, blendedNoise);
+
+        // SuperCoder79's optimization re-implemented, with a bit of a buffer due to interpolation.
+        blendNoiseMinLimit = DensityFunctions.rangeChoice(blendNoiseMain, -1000000.0, SplitBlendedNoise.MAIN_NOISE_MAX_TO_EVALUATE_1ST_HALF, blendNoiseMinLimit, DensityFunctions.zero());
+        blendNoiseMaxLimit = DensityFunctions.rangeChoice(blendNoiseMain, SplitBlendedNoise.MAIN_NOISE_MIN_TO_EVALUATE_2ND_HALF,  1000000.0, blendNoiseMaxLimit, DensityFunctions.zero());
+
+        // Individually-interpolated blended noise, directly visible in terrain.
+        DensityFunction blendedNoiseForTerrain = SplitBlendedNoise.BlendedNoiseCombine.create(
+                DensityFunctions.interpolated(blendNoiseMinLimit),
+                DensityFunctions.interpolated(blendNoiseMaxLimit),
+                DensityFunctions.interpolated(blendNoiseMain)
+        );
+        DensityFunction slopedNoiseForTerrain = DensityFunctions.add(endIslands, blendedNoiseForTerrain);
+        DensityFunction postProcessedTerrain = postProcessNoInterpolate(noiseSettings, slopedNoiseForTerrain);
+
+        return new NoiseRouterWithOnlyNoises(
+                DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(),
+                DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero(),
+                endIslandsCached2D, postProcessedTerrain, DensityFunctions.zero(), DensityFunctions.zero(), DensityFunctions.zero());
+    }
+
+    /**
+     * @author K.jpg
+     * @reason Need this to not lock us to cell coordinates.
      */
     @Overwrite
     public static double applySlide(NoiseSettings noiseSettings, double value, double y) {
