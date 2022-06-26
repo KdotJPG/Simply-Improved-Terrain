@@ -2,6 +2,7 @@ package jpg.k.simplyimprovedterrain.terrain;
 
 import com.mojang.serialization.Codec;
 import jpg.k.simplyimprovedterrain.math.Vecords.*;
+import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 import java.util.*;
@@ -938,7 +939,7 @@ public final class IrreguLerper {
         }
 
         @Override
-        public Codec<? extends DensityFunction> codec() {
+        public KeyDispatchDataCodec<? extends DensityFunction> codec() {
             return null;
         }
     }
@@ -974,7 +975,7 @@ public final class IrreguLerper {
         }
 
         @Override
-        public Codec<? extends DensityFunction> codec() {
+        public KeyDispatchDataCodec<? extends DensityFunction> codec() {
             return null;
         }
     }

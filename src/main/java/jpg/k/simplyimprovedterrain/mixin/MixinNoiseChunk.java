@@ -53,14 +53,14 @@ public class MixinNoiseChunk implements IMixinNoiseChunk {
         this.irreguLerper.setY(y - this.cellNoiseMinY * this.cellHeight);
     }
 
-    @Inject(method = "<init>(IIILnet/minecraft/world/level/levelgen/NoiseRouter;IILnet/minecraft/world/level/levelgen/DensityFunctions$BeardifierOrMarker;Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/world/level/levelgen/Aquifer$FluidPicker;Lnet/minecraft/world/level/levelgen/blending/Blender;)V", at = @At("TAIL"))
-    private void injectConstructor(int cellCountXZ, int cellCountY, int cellNoiseMinY, NoiseRouter noiseRouter, int chunkStartX, int chunkStartZ, DensityFunctions.BeardifierOrMarker beardifierOrMarker, NoiseGeneratorSettings noiseGeneratorSettings, Aquifer.FluidPicker fluidPicker, Blender blender, CallbackInfo callbackInfo) {
+    @Inject(method = "<init>(ILnet/minecraft/world/level/levelgen/RandomState;IILnet/minecraft/world/level/levelgen/NoiseSettings;Lnet/minecraft/world/level/levelgen/DensityFunctions$BeardifierOrMarker;Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/world/level/levelgen/Aquifer$FluidPicker;Lnet/minecraft/world/level/levelgen/blending/Blender;)V", at = @At("TAIL"))
+    private void injectConstructor(int cellCountXZ, RandomState randomState, int chunkStartX, int chunkStartZ, NoiseSettings noiseSettings, DensityFunctions.BeardifierOrMarker beardifierOrMarker, NoiseGeneratorSettings noiseGeneratorSettings, Aquifer.FluidPicker fluidPicker, Blender blender, CallbackInfo callbackInfo) {
         if (this.irreguLerperRegistrar == null) return;
         this.irreguLerperRegistrar.commit(chunkStartX, cellNoiseMinY * this.cellHeight, chunkStartZ, (NoiseChunk)(Object)this);
         this.irreguLerperRegistrar = null;
 
-        // Ideally this would be the world seed, but this should be fine.
-        this.irreguLerperSeed = noiseRouter.aquiferPositionalRandomFactory().at(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE).nextLong();
+        // Seed for its randomization.
+        this.irreguLerperSeed = randomState.legacyLevelSeed();
     }
 
     @Inject(method = "stopInterpolation()V", at = @At("HEAD"), cancellable = true)

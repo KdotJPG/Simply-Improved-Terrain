@@ -9,7 +9,7 @@ import org.apache.commons.lang3.function.TriFunction;
 
 public class BiomeFiddleHelper {
 
-    public static final int BLOCK_XYZ_OFFSET = 0; // Was QuartPos.SIZE / 2;
+    public static final int BLOCK_XYZ_OFFSET = QuartPos.SIZE / 2;
     private static final double FIDDLE_MAGNITUDE = 1.0; // 0.9 in net.minecraft.world.level.biome.BiomeManager
     private static final int FIDDLE_HASH_BIT_START = 24;
     private static final int FIDDLE_HASH_BIT_COUNT = 10;
@@ -36,11 +36,11 @@ public class BiomeFiddleHelper {
         hash = LinearCongruentialGenerator.next(hash, quartX);
         hash = LinearCongruentialGenerator.next(hash, quartY);
         hash = LinearCongruentialGenerator.next(hash, quartZ);
-        int jz = getFiddleInt(hash);
+        int jz = getFiddleInt(hash) - BLOCK_XYZ_OFFSET;
         hash = LinearCongruentialGenerator.next(hash, seed);
-        int jy = getFiddleInt(hash);
+        int jy = getFiddleInt(hash) - BLOCK_XYZ_OFFSET;
         hash = LinearCongruentialGenerator.next(hash, seed);
-        int jx = getFiddleInt(hash);
+        int jx = getFiddleInt(hash) - BLOCK_XYZ_OFFSET;
         return source.apply(QuartPos.toBlock(quartX) - jx, QuartPos.toBlock(quartY) - jy, QuartPos.toBlock(quartZ) - jz);
     }
 

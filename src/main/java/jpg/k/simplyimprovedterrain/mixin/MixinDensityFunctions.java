@@ -17,12 +17,12 @@ public class MixinDensityFunctions {
     // TODO This can't possibly be the best solution... or can it?
     @Inject(method = "bootstrap", at = @At("TAIL"))
     private static void bootstrap(Registry<Codec<? extends DensityFunction>> registry, CallbackInfoReturnable<Codec<? extends DensityFunction>> callbackInfos) {
-        Registry.register(Registry.DENSITY_FUNCTION_TYPES, "blended_noise_combine", SplitBlendedNoise.BlendedNoiseCombine.CODEC);
+        Registry.register(registry, "blended_noise_combine", SplitBlendedNoise.BlendedNoiseCombine.CODEC.codec());
         for (var blendedNoisePartType : SplitBlendedNoise.BlendedNoisePart.Type.values()) {
-            Registry.register(Registry.DENSITY_FUNCTION_TYPES, blendedNoisePartType.getSerializedName(), blendedNoisePartType.codec);
+            Registry.register(registry, blendedNoisePartType.getSerializedName(), blendedNoisePartType.codec.codec());
         }
-        Registry.register(Registry.DENSITY_FUNCTION_TYPES, "smooth_min", CustomMathDensityFunctions.SmoothMin.CODEC);
-        Registry.register(Registry.DENSITY_FUNCTION_TYPES, "smooth_range_choice", CustomMathDensityFunctions.SmoothRangeChoice.CODEC);
+        Registry.register(registry, "smooth_min", CustomMathDensityFunctions.SmoothMin.CODEC.codec());
+        Registry.register(registry, "smooth_range_choice", CustomMathDensityFunctions.SmoothRangeChoice.CODEC.codec());
     }
 
 }

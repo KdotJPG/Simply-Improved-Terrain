@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinBlendedNoise;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinPerlinFractalNoise;
+import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.levelgen.DensityFunction;
@@ -91,15 +92,15 @@ public class SplitBlendedNoise {
             return Objects.hash(minLimitNoise, maxLimitNoise, mainNoise);
         }
 
-        public static final Codec<BlendedNoiseCombine> CODEC = RecordCodecBuilder.create((instance) -> {
+        public static final KeyDispatchDataCodec<BlendedNoiseCombine> CODEC = KeyDispatchDataCodec.of(RecordCodecBuilder.mapCodec((instance) -> {
             return instance.group(
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("min_limit_noise").forGetter(BlendedNoiseCombine::minLimitNoise),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("max_limit_noise").forGetter(BlendedNoiseCombine::maxLimitNoise),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("main_noise").forGetter(BlendedNoiseCombine::mainNoise)
             ).apply(instance, BlendedNoiseCombine::new);
-        });
+        }));
         @Override
-        public Codec<? extends DensityFunction> codec() {
+        public KeyDispatchDataCodec<? extends DensityFunction> codec() {
             return CODEC;
         }
 
@@ -115,7 +116,7 @@ public class SplitBlendedNoise {
         // Also PerlinNoise.class is fractal noise on Perlin. ImprovedNoise.class is Perlin.
         private final PerlinNoise noise;
 
-        private final double xzScaleTrue, yScaleTrue, yScale;
+        private final double xzMultiplier, yMultiplier, yShelfScale;
         private final double maxValue;
         private final int octaveCount;
         private final BlendedNoise blendedNoise;
@@ -136,9 +137,9 @@ public class SplitBlendedNoise {
                 return name;
             }
 
-            public final Codec<BlendedNoisePart> codec = DensityFunction.HOLDER_HELPER_CODEC.fieldOf("blended_noise").xmap((densityFunction) -> {
+            public final KeyDispatchDataCodec<BlendedNoisePart> codec = KeyDispatchDataCodec.of(DensityFunction.HOLDER_HELPER_CODEC.fieldOf("blended_noise").xmap((densityFunction) -> {
                 return BlendedNoisePart.create(this, densityFunction);
-            }, BlendedNoisePart::blendedNoise).codec();
+            }, BlendedNoisePart::blendedNoise));
         }
 
         public static BlendedNoisePart create(Type type, DensityFunction blendedNoise) {
@@ -146,7 +147,10 @@ public class SplitBlendedNoise {
         }
 
         protected BlendedNoisePart(Type type, DensityFunction blendedNoise) {
-            this(type, blendedNoise instanceof BlendedNoise ? (BlendedNoise)blendedNoise : BlendedNoise.UNSEEDED);
+            this(type, blendedNoise instanceof BlendedNoise ?
+                    (BlendedNoise)blendedNoise :
+                    BlendedNoise.createUnseeded(0.25D, 0.25D, 80.0D, 160.0D, 4.0D) // Needs to be a valid config for some intermediate stage.
+            );
         }
 
         protected BlendedNoisePart(Type type, BlendedNoise blendedNoise) {
@@ -156,27 +160,27 @@ public class SplitBlendedNoise {
             switch (type) {
                 case MIN_LIMIT_NOISE:
                     this.noise = mixinBlendedNoise.minLimitNoise();
-                    this.xzScaleTrue = mixinBlendedNoise.xzScale() / mixinBlendedNoise.cellWidth();
-                    this.yScaleTrue = mixinBlendedNoise.yScale() / mixinBlendedNoise.cellHeight();
-                    this.yScale = mixinBlendedNoise.yScale();
-                    this.maxValue = noise.maxBrokenValue(this.yScale);
+                    this.xzMultiplier = mixinBlendedNoise.xzMultiplier();
+                    this.yMultiplier = mixinBlendedNoise.yMultiplier();
+                    this.yShelfScale = mixinBlendedNoise.yMultiplier() * mixinBlendedNoise.smearScaleMultiplier();
+                    this.maxValue = noise.maxBrokenValue(this.yMultiplier);
                     this.octaveCount = ((IMixinPerlinFractalNoise)this.noise).octaveCount();
                     break;
                 case MAX_LIMIT_NOISE:
                     this.noise = mixinBlendedNoise.maxLimitNoise();
-                    this.xzScaleTrue = mixinBlendedNoise.xzScale() / mixinBlendedNoise.cellWidth();
-                    this.yScaleTrue = mixinBlendedNoise.yScale() / mixinBlendedNoise.cellHeight();
-                    this.yScale = mixinBlendedNoise.yScale();
-                    this.maxValue = noise.maxBrokenValue(this.yScale);
+                    this.xzMultiplier = mixinBlendedNoise.xzMultiplier();
+                    this.yMultiplier = mixinBlendedNoise.yMultiplier();
+                    this.yShelfScale = mixinBlendedNoise.yMultiplier() * mixinBlendedNoise.smearScaleMultiplier();
+                    this.maxValue = noise.maxBrokenValue(this.yMultiplier);
                     this.octaveCount = ((IMixinPerlinFractalNoise)this.noise).octaveCount();
                     break;
                 default:
                 case MAIN_NOISE:
                     this.noise = mixinBlendedNoise.mainNoise();
-                    this.xzScaleTrue = mixinBlendedNoise.xzMainScale() / mixinBlendedNoise.cellWidth();
-                    this.yScaleTrue = mixinBlendedNoise.yMainScale() / mixinBlendedNoise.cellHeight();
-                    this.yScale = mixinBlendedNoise.yMainScale();
-                    this.maxValue = noise.maxBrokenValue(this.yScale);
+                    this.xzMultiplier = mixinBlendedNoise.xzMultiplier() / mixinBlendedNoise.xzFactor();
+                    this.yMultiplier = mixinBlendedNoise.yMultiplier() / mixinBlendedNoise.yFactor();
+                    this.yShelfScale = mixinBlendedNoise.yMultiplier() * mixinBlendedNoise.smearScaleMultiplier() / mixinBlendedNoise.yFactor();
+                    this.maxValue = noise.maxBrokenValue(this.yMultiplier);
                     this.octaveCount = ((IMixinPerlinFractalNoise)this.noise).octaveCount();
                     break;
             }
@@ -194,11 +198,11 @@ public class SplitBlendedNoise {
                 ImprovedNoise improvedNoise = this.noise.getOctaveNoise(octaveIndex);
                 if (improvedNoise != null) {
                     value += improvedNoise.noise(
-                            PerlinNoise.wrap(x * this.xzScaleTrue * relativeFrequency),
-                            PerlinNoise.wrap(y * this.yScaleTrue  * relativeFrequency),
-                            PerlinNoise.wrap(z * this.xzScaleTrue * relativeFrequency),
-                            this.yScale * relativeFrequency,
-                            y * this.yScaleTrue * relativeFrequency) / relativeFrequency;
+                            PerlinNoise.wrap(x * this.xzMultiplier * relativeFrequency),
+                            PerlinNoise.wrap(y * this.yMultiplier * relativeFrequency),
+                            PerlinNoise.wrap(z * this.xzMultiplier * relativeFrequency),
+                            this.yShelfScale * relativeFrequency,
+                            y * this.yMultiplier * relativeFrequency) / relativeFrequency;
                 }
                 relativeFrequency *= 0.5;
             }
@@ -217,7 +221,7 @@ public class SplitBlendedNoise {
         }
 
         @Override
-        public Codec<? extends DensityFunction> codec() {
+        public KeyDispatchDataCodec<? extends DensityFunction> codec() {
             return this.type.codec;
         }
 
@@ -230,12 +234,12 @@ public class SplitBlendedNoise {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             BlendedNoisePart that = (BlendedNoisePart) o;
-            return Double.compare(that.xzScaleTrue, xzScaleTrue) == 0 && Double.compare(that.yScaleTrue, yScaleTrue) == 0 && Double.compare(that.yScale, yScale) == 0 && Double.compare(that.maxValue, maxValue) == 0 && noise.equals(that.noise) && blendedNoise.equals(that.blendedNoise) && type == that.type;
+            return Double.compare(that.xzMultiplier, xzMultiplier) == 0 && Double.compare(that.yMultiplier, yMultiplier) == 0 && Double.compare(that.yShelfScale, yShelfScale) == 0 && Double.compare(that.maxValue, maxValue) == 0 && noise.equals(that.noise) && blendedNoise.equals(that.blendedNoise) && type == that.type;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(noise, xzScaleTrue, yScaleTrue, yScale, maxValue, blendedNoise, type);
+            return Objects.hash(noise, xzMultiplier, yMultiplier, yShelfScale, maxValue, blendedNoise, type);
         }
 
         @Override

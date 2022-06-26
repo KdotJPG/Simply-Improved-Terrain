@@ -3,9 +3,10 @@ package jpg.k.simplyimprovedterrain.mixin;
 import java.util.Random;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.RuinedPortalPiece;
+import net.minecraft.world.level.levelgen.structure.structures.RuinedPortalPiece;
 import net.minecraft.world.level.levelgen.structure.StructurePiece;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,7 +25,7 @@ public class MixinRuinedPortalPiece {
     private @Final RuinedPortalPiece.Properties properties;
 
     @Inject(method = "spreadNetherrack", at = @At("HEAD"), cancellable = true)
-    public void injectPlaceNetherracKBase(Random random, LevelAccessor levelAccessor, CallbackInfo ci) {
+    public void injectSpreadNetherrack(RandomSource random, LevelAccessor levelAccessor, CallbackInfo ci) {
         BoundingBox boundingBox = ((StructurePiece)(Object)this).getBoundingBox();
 
         boolean flag = this.verticalPlacement == RuinedPortalPiece.VerticalPlacement.ON_LAND_SURFACE || this.verticalPlacement == RuinedPortalPiece.VerticalPlacement.ON_OCEAN_FLOOR;
@@ -94,17 +95,17 @@ public class MixinRuinedPortalPiece {
     }
 
     @Shadow
-    private void placeNetherrackOrMagma(Random random, LevelAccessor levelAccessor, BlockPos pos) {
+    private void placeNetherrackOrMagma(RandomSource random, LevelAccessor levelAccessor, BlockPos pos) {
         throw new AssertionError();
     }
 
     @Shadow
-    private void maybeAddLeavesAbove(Random random, LevelAccessor levelAccessor, BlockPos pos) {
+    private void maybeAddLeavesAbove(RandomSource random, LevelAccessor levelAccessor, BlockPos pos) {
         throw new AssertionError();
     }
 
     @Shadow
-    private void addNetherrackDripColumn(Random random, LevelAccessor levelAccessor, BlockPos pos) {
+    private void addNetherrackDripColumn(RandomSource random, LevelAccessor levelAccessor, BlockPos pos) {
         throw new AssertionError();
     }
 

@@ -4,7 +4,7 @@
   "package": "jpg.k.simplyimprovedterrain.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MixinBaseDiskFeature",
+    "MixinDiskFeature",
     "MixinBiomeManager",
     "MixinBlendedNoise",
     "MixinClimateSampler",

@@ -4,6 +4,7 @@ import com.mojang.datafixers.types.Func;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -90,15 +91,15 @@ public class CustomMathDensityFunctions {
             return Objects.hash(inputA, inputB, smoothingFactor);
         }
 
-        public static final Codec<SmoothMin> CODEC = RecordCodecBuilder.create((instance) -> {
+        public static final KeyDispatchDataCodec<SmoothMin> CODEC = KeyDispatchDataCodec.of(RecordCodecBuilder.mapCodec((instance) -> {
             return instance.group(
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("input_a").forGetter(SmoothMin::inputA),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("input_b").forGetter(SmoothMin::inputB),
                     DensityFunctions.NOISE_VALUE_CODEC.fieldOf("smoothing_factor").forGetter(SmoothMin::smoothingFactor)
             ).apply(instance, SmoothMin::new);
-        });
+        }));
         @Override
-        public Codec<? extends DensityFunction> codec() {
+        public KeyDispatchDataCodec<? extends DensityFunction> codec() {
             return CODEC;
         }
     }
@@ -216,8 +217,8 @@ public class CustomMathDensityFunctions {
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("when_out_of_range").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::whenOutOfRange)
             ).apply(instance, CustomMathDensityFunctions.SmoothRangeChoice::new);
         });
-        public static final Codec<CustomMathDensityFunctions.SmoothRangeChoice> CODEC = DATA_CODEC.codec();
-        public Codec<? extends DensityFunction> codec() {
+        public static final KeyDispatchDataCodec<CustomMathDensityFunctions.SmoothRangeChoice> CODEC = KeyDispatchDataCodec.of(DATA_CODEC);
+        public KeyDispatchDataCodec<? extends DensityFunction> codec() {
             return CODEC;
         }
     }
