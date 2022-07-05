@@ -31,7 +31,6 @@ public class MixinNoiseChunk implements IMixinNoiseChunk {
     @Shadow int inCellY;
     @Shadow int inCellZ;
 
-    private long irreguLerperSeed;
     private IrreguLerper irreguLerper = null;
     private IrreguLerper.Registrar irreguLerperRegistrar = null;
 
@@ -55,12 +54,10 @@ public class MixinNoiseChunk implements IMixinNoiseChunk {
 
     @Inject(method = "<init>(ILnet/minecraft/world/level/levelgen/RandomState;IILnet/minecraft/world/level/levelgen/NoiseSettings;Lnet/minecraft/world/level/levelgen/DensityFunctions$BeardifierOrMarker;Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/world/level/levelgen/Aquifer$FluidPicker;Lnet/minecraft/world/level/levelgen/blending/Blender;)V", at = @At("TAIL"))
     private void injectConstructor(int cellCountXZ, RandomState randomState, int chunkStartX, int chunkStartZ, NoiseSettings noiseSettings, DensityFunctions.BeardifierOrMarker beardifierOrMarker, NoiseGeneratorSettings noiseGeneratorSettings, Aquifer.FluidPicker fluidPicker, Blender blender, CallbackInfo callbackInfo) {
-        if (this.irreguLerperRegistrar == null) return;
-        this.irreguLerperRegistrar.commit(chunkStartX, cellNoiseMinY * this.cellHeight, chunkStartZ, (NoiseChunk)(Object)this);
-        this.irreguLerperRegistrar = null;
-
-        // Seed for its randomization.
-        this.irreguLerperSeed = randomState.legacyLevelSeed();
+        if (this.irreguLerperRegistrar != null) {
+            this.irreguLerperRegistrar.commit(randomState.legacyLevelSeed(), chunkStartX, cellNoiseMinY * this.cellHeight, chunkStartZ, (NoiseChunk)(Object)this);
+            this.irreguLerperRegistrar = null;
+        }
     }
 
     @Inject(method = "stopInterpolation()V", at = @At("HEAD"), cancellable = true)
@@ -75,7 +72,7 @@ public class MixinNoiseChunk implements IMixinNoiseChunk {
     private void injectWrapNew(DensityFunction densityFunction, CallbackInfoReturnable<DensityFunction> cir) {
 
         if (this.irreguLerper == null) {
-            this.irreguLerper = new IrreguLerper(this.irreguLerperSeed, this.cellCountXZ * this.cellWidth, this.cellHeight * this.cellCountY, this.cellWidth, this.cellHeight);
+            this.irreguLerper = new IrreguLerper(this.cellCountXZ * this.cellWidth, this.cellHeight * this.cellCountY, this.cellWidth, this.cellHeight);
             this.irreguLerperRegistrar = null;
         }
 

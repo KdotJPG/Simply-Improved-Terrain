@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinBlendedNoise;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinPerlinFractalNoise;
+import net.minecraft.core.Registry;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringRepresentable;
@@ -17,6 +18,13 @@ import java.util.Objects;
 import static net.minecraft.core.Registry.register;
 
 public class SplitBlendedNoise {
+
+    public static void bootstrap(Registry<Codec<? extends DensityFunction>> registry) {
+        Registry.register(registry, "blended_noise_combine", SplitBlendedNoise.BlendedNoiseCombine.CODEC.codec());
+        for (var blendedNoisePartType : SplitBlendedNoise.BlendedNoisePart.Type.values()) {
+            Registry.register(registry, blendedNoisePartType.getSerializedName(), blendedNoisePartType.codec.codec());
+        }
+    }
 
     // Adapted from Vanilla
     private static final double MAIN_NOISE_DIVISOR = 20.0;
@@ -149,11 +157,13 @@ public class SplitBlendedNoise {
         protected BlendedNoisePart(Type type, DensityFunction blendedNoise) {
             this(type, blendedNoise instanceof BlendedNoise ?
                     (BlendedNoise)blendedNoise :
-                    BlendedNoise.createUnseeded(0.25D, 0.25D, 80.0D, 160.0D, 4.0D) // Needs to be a valid config for some intermediate stage.
+                    BlendedNoise.createUnseeded(0.25, 0.25, 80.0, 160.0, 4.0) // Quick fix (needs some valid default)
             );
         }
 
         protected BlendedNoisePart(Type type, BlendedNoise blendedNoise) {
+            if (blendedNoise == null)
+                blendedNoise = BlendedNoise.createUnseeded(0.25, 0.25, 80.0, 160.0, 4.0); // Quick fix (needs some valid default)
             IMixinBlendedNoise mixinBlendedNoise = (IMixinBlendedNoise)blendedNoise;
             this.blendedNoise = blendedNoise;
             this.type = type;

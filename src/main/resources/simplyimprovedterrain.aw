@@ -9,4 +9,3 @@ accessible method net/minecraft/world/level/levelgen/NoiseChunk cachedClimateSam
 accessible class net/minecraft/world/level/levelgen/OreVeinifier$VeinType
 accessible field net/minecraft/world/level/levelgen/OreVeinifier$VeinType minY I
 accessible field net/minecraft/world/level/levelgen/OreVeinifier$VeinType maxY I
-accessible field net/minecraft/world/level/levelgen/DensityFunctions NOISE_VALUE_CODEC Lcom/mojang/serialization/Codec;

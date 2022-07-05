@@ -4,6 +4,7 @@ import com.mojang.datafixers.types.Func;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Registry;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.DensityFunction;
@@ -13,6 +14,11 @@ import org.apache.http.cookie.SM;
 import java.util.Objects;
 
 public class CustomMathDensityFunctions {
+
+    public static void bootstrap(Registry<Codec<? extends DensityFunction>> registry) {
+        Registry.register(registry, "smooth_min", CustomMathDensityFunctions.SmoothMin.CODEC.codec());
+        Registry.register(registry, "smooth_range_choice", CustomMathDensityFunctions.SmoothRangeChoice.CODEC.codec());
+    }
 
     public static class SmoothMin implements DensityFunction.SimpleFunction {
         private final DensityFunction inputA, inputB;
@@ -95,7 +101,7 @@ public class CustomMathDensityFunctions {
             return instance.group(
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("input_a").forGetter(SmoothMin::inputA),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("input_b").forGetter(SmoothMin::inputB),
-                    DensityFunctions.NOISE_VALUE_CODEC.fieldOf("smoothing_factor").forGetter(SmoothMin::smoothingFactor)
+                    Codec.doubleRange(0, Double.POSITIVE_INFINITY).fieldOf("smoothing_factor").forGetter(SmoothMin::smoothingFactor)
             ).apply(instance, SmoothMin::new);
         }));
         @Override
@@ -210,9 +216,9 @@ public class CustomMathDensityFunctions {
         public static final MapCodec<CustomMathDensityFunctions.SmoothRangeChoice> DATA_CODEC = RecordCodecBuilder.mapCodec((instance) -> {
             return instance.group(
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("input").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::input),
-                    DensityFunctions.NOISE_VALUE_CODEC.fieldOf("min_inclusive").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::minInclusive),
-                    DensityFunctions.NOISE_VALUE_CODEC.fieldOf("max_exclusive").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::maxExclusive),
-                    DensityFunctions.NOISE_VALUE_CODEC.fieldOf("smoothing_factor").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::smoothingFactor),
+                    Codec.doubleRange(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY).fieldOf("min_inclusive").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::minInclusive),
+                    Codec.doubleRange(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY).fieldOf("max_exclusive").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::maxExclusive),
+                    Codec.doubleRange(0, Double.POSITIVE_INFINITY).fieldOf("smoothing_factor").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::smoothingFactor),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("when_in_range").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::whenInRange),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("when_out_of_range").forGetter(CustomMathDensityFunctions.SmoothRangeChoice::whenOutOfRange)
             ).apply(instance, CustomMathDensityFunctions.SmoothRangeChoice::new);

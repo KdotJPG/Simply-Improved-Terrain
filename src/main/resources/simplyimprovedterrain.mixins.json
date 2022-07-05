@@ -4,12 +4,10 @@
   "package": "jpg.k.simplyimprovedterrain.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MixinDiskFeature",
     "MixinBiomeManager",
     "MixinBlendedNoise",
     "MixinClimateSampler",
-    "MixinDensityFunctions",
-    "MixinShelfEnabledNoise",
+    "MixinDiskFeature",
     "MixinEndIslandDensityFunction",
     "MixinMultiNoiseBiomeSource",
     "MixinNoiseBasedChunkGenerator",
@@ -17,6 +15,7 @@
     "MixinNoiseRouterData",
     "MixinPerlinFractalNoise",
     "MixinRuinedPortalPiece",
+    "MixinShelfEnabledNoise",
     "MixinSimplexNoise",
     "MixinTheEndBiomeSource"
   ],

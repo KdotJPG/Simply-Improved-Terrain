@@ -1,6 +1,5 @@
 package jpg.k.simplyimprovedterrain.terrain;
 
-import com.mojang.serialization.Codec;
 import jpg.k.simplyimprovedterrain.math.Vecords.*;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
@@ -39,14 +38,14 @@ public final class IrreguLerper {
     private static final long HASH_MULTIPLIER = 0x53A3F72DEEC546F5L;
 
     // Set before chunk initialization.
-    private final long seed;
     private final int chunkWidth, chunkHeight;
     private final double spacingXZ, spacingY;
     private final double radiusXZ, radiusY;
     private final double rotatedSquareWidthHalfScaled;
     private final Registrar registrar;
 
-    // Initialized for a chunk.
+    // Set during chunk initialization.
+    private long globalSeed;
     private int nSortedDatapoints;
     private int nInterpolatedValues;
     private DatapointDataArray sortedDatapointData;
@@ -75,8 +74,7 @@ public final class IrreguLerper {
     record PatchBoundaryInfo(Vector3d floodFillBoundaryPlaneVector, double floodFillBoundaryPlaneMaxValueAtBoundary, int opposingPatchIndex, double distanceSquaredToOpposingPoint) { }
     record PointToSample(Vector3d pointInChunk, Vector2d scaledRotation) { }
 
-    public IrreguLerper(long seed, int chunkWidth, int chunkHeight, double spacingXZ, double spacingY) {
-        this.seed = seed;
+    public IrreguLerper(int chunkWidth, int chunkHeight, double spacingXZ, double spacingY) {
         this.chunkWidth = chunkWidth;
         this.chunkHeight = chunkHeight;
         this.spacingXZ = spacingXZ;
@@ -87,7 +85,8 @@ public final class IrreguLerper {
         this.registrar = new Registrar();
     }
 
-    public void initForChunk(int chunkBlockX, int chunkBlockY, int chunkBlockZ, DensityFunction.FunctionContext masterFunctionContext, List<DensityFunction> interpolated3DFunctions, List<DensityFunction> cellular3DFunctions) {
+    public void initForChunk(long globalSeed, int chunkBlockX, int chunkBlockY, int chunkBlockZ, DensityFunction.FunctionContext masterFunctionContext, List<DensityFunction> interpolated3DFunctions, List<DensityFunction> cellular3DFunctions) {
+        this.globalSeed = globalSeed;
         this.masterFunctionContext = masterFunctionContext;
         this.running = true;
 
@@ -711,7 +710,7 @@ public final class IrreguLerper {
     }
 
     private long primeHash(long gxPrime, long gyPrime, long gzPrime) {
-        return (seed ^ gxPrime ^ gyPrime ^ gzPrime) * HASH_MULTIPLIER;
+        return (globalSeed ^ gxPrime ^ gyPrime ^ gzPrime) * HASH_MULTIPLIER;
     }
 
     private double calcPointDeltaForXZ(int i) {
@@ -903,8 +902,8 @@ public final class IrreguLerper {
             return new CellularRegistration(index, function);
         }
 
-        public void commit(int chunkBlockX, int chunkBlockY, int chunkBlockZ, DensityFunction.FunctionContext masterFunctionContext) {
-            IrreguLerper.this.initForChunk(chunkBlockX, chunkBlockY, chunkBlockZ, masterFunctionContext, this.interpolated3DFunctions, this.cellular3DFunctions);
+        public void commit(long globalSeed, int chunkBlockX, int chunkBlockY, int chunkBlockZ, DensityFunction.FunctionContext masterFunctionContext) {
+            IrreguLerper.this.initForChunk(globalSeed, chunkBlockX, chunkBlockY, chunkBlockZ, masterFunctionContext, this.interpolated3DFunctions, this.cellular3DFunctions);
         }
     }
 

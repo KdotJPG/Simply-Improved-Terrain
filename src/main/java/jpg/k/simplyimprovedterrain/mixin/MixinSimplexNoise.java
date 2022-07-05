@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(SimplexNoise.class)
 public class MixinSimplexNoise implements IMixinSimplexNoise {
 
-    @Shadow @Final private int[] p = new int[512];
+    @Shadow @Final private int[] p;
 
     private static final double SKEW_2D = 0.366025403784439;
     private static final double UNSKEW_2D = -0.21132486540518713;

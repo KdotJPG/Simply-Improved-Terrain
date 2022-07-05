@@ -6,7 +6,6 @@ import jpg.k.simplyimprovedterrain.mixinapi.IMixinNoiseChunk;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.NoiseColumn;
@@ -21,9 +20,6 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.levelgen.*;
 import net.minecraft.world.level.levelgen.blending.Blender;
-import net.minecraft.world.level.levelgen.structure.StructureSet;
-import net.minecraft.world.level.levelgen.synth.NormalNoise;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -32,7 +28,6 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.OptionalInt;
@@ -110,8 +105,8 @@ public abstract class MixinNoiseBasedChunkGenerator {
         int yBottomOffset = vanillaNoiseGridMinY * cellHeight;
 
         // Initialize for generation
-        NoiseChunk noiseChunk = chunkAccess.getOrCreateNoiseChunk((chunkAccessx) -> {
-            return this.createNoiseChunk(chunkAccessx, structureManager, blender, randomState);
+        NoiseChunk noiseChunk = chunkAccess.getOrCreateNoiseChunk((thisChunkAccess) -> {
+            return this.createNoiseChunk(thisChunkAccess, structureManager, blender, randomState);
         });
         IMixinNoiseChunk mixinNoiseChunk = (IMixinNoiseChunk)(Object)noiseChunk;
         Aquifer aquifer = noiseChunk.aquifer();
