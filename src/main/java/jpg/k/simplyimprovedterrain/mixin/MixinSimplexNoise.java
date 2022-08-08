@@ -3,6 +3,7 @@ package jpg.k.simplyimprovedterrain.mixin;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinSimplexNoise;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.synth.SimplexNoise;
+import org.apache.commons.lang3.NotImplementedException;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -20,6 +21,7 @@ public class MixinSimplexNoise implements IMixinSimplexNoise {
     private static final double UNSKEW_2D = -0.21132486540518713;
     private static final float RSQUARED_2D = 0.5f;
     private static final double NORMALIZATION_DIVISOR_2D = 0.01001634121365712;
+    private static final double GRADIENT_MAGNITUDE_VARIATION = 0.7071067811865475;
 
     private static final double[] GRAD_VECTORS_2_24_128 = {
             0.130526192220052,  0.99144486137381,   0.38268343236509,   0.923879532511287,  0.608761429008721,  0.793353340291235,  0.793353340291235,  0.608761429008721,
@@ -60,6 +62,11 @@ public class MixinSimplexNoise implements IMixinSimplexNoise {
         for (int i = 0; i < GRAD_VECTORS_2_24_128.length; i++) GRAD_VECTORS_2_24_128[i] /= NORMALIZATION_DIVISOR_2D;
     }
 
+    @Shadow
+    private int p(int i) {
+        throw new NotImplementedException();
+    }
+
     @Override
     public int[] getPermutationTable() {
         return this.p;
@@ -84,15 +91,11 @@ public class MixinSimplexNoise implements IMixinSimplexNoise {
         double t = (xi + yi) * UNSKEW_2D;
         double dx0 = xi + t, dy0 = yi + t;
 
-        // Prepare for permutation table
-        int mxsb = xsb & 255;
-        int mysb = ysb & 255;
-
         // First vertex.
         double value = 0;
         double a0 = RSQUARED_2D - dx0 * dx0 - dy0 * dy0;
         if (a0 > 0) {
-            value = (a0 * a0) * (a0 * a0) * grad(this.p[mxsb + this.p[mysb]], dx0, dy0);
+            value = (a0 * a0) * (a0 * a0) * grad(this.p(xsb + this.p(ysb)), dx0, dy0);
         }
 
         // Second vertex.
@@ -100,7 +103,7 @@ public class MixinSimplexNoise implements IMixinSimplexNoise {
         if (a1 > 0) {
             double dx1 = dx0 - (1 + 2 * UNSKEW_2D);
             double dy1 = dy0 - (1 + 2 * UNSKEW_2D);
-            value += (a1 * a1) * (a1 * a1) * grad(this.p[mxsb + 1 + this.p[mysb + 1]], dx1, dy1);
+            value += (a1 * a1) * (a1 * a1) * grad(this.p(xsb + 1 + this.p(ysb + 1)), dx1, dy1);
         }
 
         // Third vertex.
@@ -109,14 +112,14 @@ public class MixinSimplexNoise implements IMixinSimplexNoise {
             double dy2 = dy0 - (UNSKEW_2D + 1);
             double a2 = RSQUARED_2D - dx2 * dx2 - dy2 * dy2;
             if (a2 > 0) {
-                value += (a2 * a2) * (a2 * a2) * grad(this.p[mxsb + this.p[mysb + 1]], dx2, dy2);
+                value += (a2 * a2) * (a2 * a2) * grad(this.p(xsb + this.p(ysb + 1)), dx2, dy2);
             }
         } else {
             double dx2 = dx0 - (UNSKEW_2D + 1);
             double dy2 = dy0 - UNSKEW_2D;
             double a2 = RSQUARED_2D - dx2 * dx2 - dy2 * dy2;
             if (a2 > 0) {
-                value += (a2 * a2) * (a2 * a2) * grad(this.p[mxsb + 1 + this.p[mysb]], dx2, dy2);
+                value += (a2 * a2) * (a2 * a2) * grad(this.p(xsb + 1 + this.p(ysb)), dx2, dy2);
             }
         }
 
@@ -124,6 +127,15 @@ public class MixinSimplexNoise implements IMixinSimplexNoise {
     }
 
     private double grad(int hash, double dx, double dy) {
-        return (GRAD_VECTORS_2_24_128[hash & 0xFE] * dx + GRAD_VECTORS_2_24_128[hash | 0x01] * dy);
+
+        // Ordinary noise gradient dot product.
+        double value = (GRAD_VECTORS_2_24_128[hash & 0xFE] * dx + GRAD_VECTORS_2_24_128[hash | 0x01] * dy);
+
+        // Old Simplex noise had variation in gradient magnitude dependent on direction.
+        // Here, re-implement that, independently of direction.
+        // This is necessary to make frozen ocean ice patches look good again.
+        if ((hash & 0x01) != 0) value *= GRADIENT_MAGNITUDE_VARIATION;
+
+        return value;
     }
 }
