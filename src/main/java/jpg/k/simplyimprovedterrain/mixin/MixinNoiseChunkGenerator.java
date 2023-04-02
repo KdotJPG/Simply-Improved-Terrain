@@ -391,7 +391,7 @@ public class MixinNoiseChunkGenerator {
 
             // Set block based on thresholded noise sign and vertical position.
             BlockState blockState = this.generateBaseState(noiseValue, y);
-            if (states != null) {
+            if (states != null && states.length > y) {
                 states[y] = blockState;
             }
 
