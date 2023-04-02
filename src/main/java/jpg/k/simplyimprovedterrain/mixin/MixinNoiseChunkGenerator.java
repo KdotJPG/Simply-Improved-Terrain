@@ -27,7 +27,6 @@ import net.minecraft.world.gen.feature.structure.Structure;
 import net.minecraft.world.gen.Heightmap;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -47,12 +46,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(NoiseChunkGenerator.class)
 public class MixinNoiseChunkGenerator {
 
+    private static final double PRIMARY_NOISE_MAIN_AMPLITUDE = 128.0;
+    private static final double BLEND_NOISE_MAIN_AMPLITUDE = 6.4;
+    private static final double NOISE_RELATIVE_VERTICAL_FREQUENCY = 1.1;
+    private static final double NOISE_SHELF_SMOOTHING_FACTOR = 0.95;
+
+    private static final int MAX_OCTAVE_COUNT_PRIMARY = 7;
+    private static final int MAX_OCTAVE_COUNT_BLEND = 4;
+    private static final double OCTAVE_COUNT_FREQUENCY_THRESHOLD_MODIFIER = 0.95;
+
     private static final double NOISE_MAIN_FREQUENCY = 684.412 / 32768.0;
     private static final double BLEND_NOISE_RELATIVE_FREQUENCY = 256.0;
-    private static final double PRIMARY_NOISE_MAIN_AMPLITUDE = 64.0;
-    private static final double BLEND_NOISE_MAIN_AMPLITUDE = 6.4;
-    private static final int N_OCTAVES_PRIMARY = 6;
-    private static final int N_OCTAVES_BLEND = 3;
 
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
 
@@ -83,6 +87,8 @@ public class MixinNoiseChunkGenerator {
     private DomainRotatedShelfNoise[] newNoiseOctaves1;
     private DomainRotatedShelfNoise[] newNoiseOctaves2;
     private DomainRotatedShelfNoise[] newNoiseOctavesBlend;
+    private double[] primaryAmplitudes;
+    private double[] blendAmplitudes;
     private double[] primaryUncertaintyBounds;
     private double[] blendUncertaintyBounds;
 
@@ -96,7 +102,7 @@ public class MixinNoiseChunkGenerator {
     private double effectiveThresholdOffset;
     private double[] thresholdSlideModifiers;
 
-    private NoiseSettings generationShapeConfig;
+    private NoiseSettings noiseSettings;
 
     boolean useEndIslandNoise;
 
@@ -106,72 +112,96 @@ public class MixinNoiseChunkGenerator {
 
         this.biomeSource = biomeSource;
 
-        // Generation configuration properties
-        DimensionSettings dimensionSettings = (DimensionSettings) settings.get();
+        DimensionSettings dimensionSettings = settings.get();
         NoiseSettings noiseSettings = dimensionSettings.noiseSettings();
-        double inverseVerticalNoiseResolution = 1.0 / chunkHeight;
-        double inverseHorizontalNoiseResolution = 1.0 / chunkWidth;
-        double thresholdTopSlideTarget = (double) noiseSettings.topSlideSettings().target();
-        double thresholdTopSlideSize = (double) noiseSettings.topSlideSettings().size();
-        double thresholdTopSlideOffset = (double) noiseSettings.topSlideSettings().offset();
-        double thresholdBottomSlideTarget = (double) noiseSettings.bottomSlideSettings().target();
-        double thresholdBottomSlideSize = (double) noiseSettings.bottomSlideSettings().size();
-        double thresholdBottomSlideOffset = (double) noiseSettings.bottomSlideSettings().offset();
+        this.noiseSettings = noiseSettings;
+
+        // Direct noise frequencies (+ shelf smoothing)
+        double inverseVanillaLerpSizeVertical = 1.0 / chunkHeight;
+        double inverseVanillaLerpSizeHorizontal = 1.0 / chunkWidth;
         this.noiseXZScale = NOISE_MAIN_FREQUENCY * noiseSettings.noiseSamplingSettings().xzScale()
-                * inverseHorizontalNoiseResolution;
-        this.noiseYScale = NOISE_MAIN_FREQUENCY * noiseSettings.noiseSamplingSettings().yScale()
-                * inverseVerticalNoiseResolution *  1.1;
+                * inverseVanillaLerpSizeHorizontal;
+        this.noiseYScale = NOISE_MAIN_FREQUENCY * NOISE_RELATIVE_VERTICAL_FREQUENCY * noiseSettings.noiseSamplingSettings().yScale()
+                * inverseVanillaLerpSizeVertical;
         this.blendNoiseXZScale = BLEND_NOISE_RELATIVE_FREQUENCY * noiseXZScale
                 / noiseSettings.noiseSamplingSettings().xzFactor();
         this.blendNoiseYScale = BLEND_NOISE_RELATIVE_FREQUENCY * noiseYScale
                 / noiseSettings.noiseSamplingSettings().yFactor();
-        this.ratioFrequencyToSmooth = Math.sqrt(3) * 0.5 * chunkHeight;
-        this.generationShapeConfig = noiseSettings;
+        this.ratioFrequencyToSmooth = NOISE_SHELF_SMOOTHING_FACTOR * chunkHeight;
+
+        // Decide how many octaves each + a fade-in for the highest frequency octaves.
+        // This works to (smoothly) filter out frequencies that vanilla trilerp would have masked away anyway.
+        int octaveCountPrimary;
+        int octaveCountBlend;
+        double highestOctaveAmplitudeRescalePrimary;
+        double highestOctaveAmplitudeRescaleBlend;
+        {
+            double effectiveInverseLerpSizeSquaredTripled = inverseVanillaLerpSizeHorizontal * inverseVanillaLerpSizeHorizontal * 2 + inverseVanillaLerpSizeVertical * inverseVanillaLerpSizeVertical;
+            double effectiveFrequencyPrimarySquaredTripled = this.noiseXZScale * this.noiseXZScale * 2 + this.noiseYScale * this.noiseYScale;
+            double effectiveFrequencyBlendSquaredTripled = this.blendNoiseXZScale * this.blendNoiseXZScale * 2 + this.blendNoiseYScale * this.blendNoiseYScale;
+            double smoothOctaveCountPrimary = Math.log(effectiveInverseLerpSizeSquaredTripled / effectiveFrequencyPrimarySquaredTripled) / Math.log(2 * 2) + 1.0;
+            double smoothOctaveCountBlend = Math.log(effectiveInverseLerpSizeSquaredTripled / effectiveFrequencyBlendSquaredTripled) / Math.log(2 * 2) + 1.0;
+            smoothOctaveCountPrimary = Math.min(MAX_OCTAVE_COUNT_PRIMARY, smoothOctaveCountPrimary);
+            smoothOctaveCountBlend = Math.min(MAX_OCTAVE_COUNT_BLEND, smoothOctaveCountBlend);
+            octaveCountPrimary = (int)smoothOctaveCountPrimary;
+            octaveCountBlend = (int)smoothOctaveCountBlend;
+            highestOctaveAmplitudeRescalePrimary = smoothOctaveCountPrimary - octaveCountPrimary;
+            highestOctaveAmplitudeRescaleBlend = smoothOctaveCountBlend - octaveCountBlend;
+        }
 
         // Seed all the noise octaves.
-        newNoiseOctaves1 = new DomainRotatedShelfNoise[N_OCTAVES_PRIMARY];
-        newNoiseOctaves2 = new DomainRotatedShelfNoise[N_OCTAVES_PRIMARY];
-        newNoiseOctavesBlend = new DomainRotatedShelfNoise[N_OCTAVES_BLEND];
-        for (int i = 0; i < Math.max(N_OCTAVES_PRIMARY, N_OCTAVES_BLEND); i++) {
-            if (i < N_OCTAVES_PRIMARY) {
-                newNoiseOctaves1[i] = new DomainRotatedShelfNoise(random);
-                newNoiseOctaves2[i] = new DomainRotatedShelfNoise(random);
+        newNoiseOctaves1 = new DomainRotatedShelfNoise[octaveCountPrimary];
+        newNoiseOctaves2 = new DomainRotatedShelfNoise[octaveCountPrimary];
+        newNoiseOctavesBlend = new DomainRotatedShelfNoise[octaveCountBlend];
+        for (int i = 0; i < Math.max(octaveCountPrimary, octaveCountBlend); i++) {
+            DomainRotatedShelfNoise octave1 = new DomainRotatedShelfNoise(random);
+            DomainRotatedShelfNoise octave2 = new DomainRotatedShelfNoise(random);
+            DomainRotatedShelfNoise octaveBlend = new DomainRotatedShelfNoise(random);
+            if (i < octaveCountPrimary) {
+                newNoiseOctaves1[i] = octave1;
+                newNoiseOctaves2[i] = octave2;
             }
-            if (i < N_OCTAVES_BLEND)
-                newNoiseOctavesBlend[i] = new DomainRotatedShelfNoise(random);
+            if (i < octaveCountBlend)
+                newNoiseOctavesBlend[i] = octaveBlend;
         }
 
+        // Pre-generate noise amplitudes into arrays to consolidate highest octave amplitude rescaling into one place
+        primaryAmplitudes = new double[octaveCountPrimary];
+        {
+            double amplitude = PRIMARY_NOISE_MAIN_AMPLITUDE;
+            for (int i = 0; i < octaveCountPrimary; i++) {
+                double rescale = (i == octaveCountPrimary - 1) ? highestOctaveAmplitudeRescalePrimary : 1.0;
+                primaryAmplitudes[i] = amplitude * rescale;
+                amplitude /= 2;
+            }
+        }
+        blendAmplitudes = new double[octaveCountBlend];
+        {
+            double amplitude = BLEND_NOISE_MAIN_AMPLITUDE;
+            for (int i = 0; i < octaveCountBlend; i++) {
+                double rescale = (i == octaveCountBlend - 1) ? highestOctaveAmplitudeRescaleBlend : 1.0;
+                blendAmplitudes[i] = amplitude * rescale;
+                amplitude /= 2;
+            }
+        }
 
-        // for N_OCTAVES_PRIMARY = 4, this would generate
-        // {
-        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (1.0 + 0.5 + 0.25 + 0.125),
-        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (0.5 + 0.25 + 0.125),
-        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (0.25 + 0.125),
-        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (0.125)
-        // };
-        primaryUncertaintyBounds = new double[N_OCTAVES_PRIMARY];
+        // These array values tell us how much noise variation is left at each step of the octave summation.
+        // We will check against these to skip early.
+        primaryUncertaintyBounds = new double[octaveCountPrimary];
         {
             double maxValueSum = 0.0;
-            for (int i = N_OCTAVES_PRIMARY - 1; i >= 0; i--) {
-                maxValueSum += 1.0 / (1 << i);
-                primaryUncertaintyBounds[i] = PRIMARY_NOISE_MAIN_AMPLITUDE * maxValueSum;
+            for (int i = octaveCountPrimary - 1; i >= 0; i--) {
+                maxValueSum += primaryAmplitudes[i];
+                primaryUncertaintyBounds[i] = maxValueSum;
             }
         }
-
-        // for N_OCTAVES_BLEND = 3, this would generate
-        // {
-        //   BLEND_NOISE_MAIN_AMPLITUDE * (0.5 + 0.25),
-        //   BLEND_NOISE_MAIN_AMPLITUDE * (0.25)
-        // };
-        if (N_OCTAVES_BLEND != 0) {
-            blendUncertaintyBounds = new double[N_OCTAVES_BLEND];
-            {
-                double maxValueSum = 0.0;
-                for (int i = N_OCTAVES_BLEND - 1; i >= 0; i--) {
-                    maxValueSum += 1.0 / (1 << i);
-                    // The + 0.5 defines a -0.5 to +0.5 range where we need the fully qualified noise value.
-                    blendUncertaintyBounds[i] = BLEND_NOISE_MAIN_AMPLITUDE * maxValueSum + 0.5;
-                }
+        blendUncertaintyBounds = new double[octaveCountBlend];
+        {
+            double maxValueSum = 0.0;
+            for (int i = octaveCountBlend - 1; i >= 0; i--) {
+                maxValueSum += blendAmplitudes[i];
+                // The + 0.5 defines a -0.5 to +0.5 range where we need the fully qualified noise value.
+                blendUncertaintyBounds[i] = maxValueSum + 0.5;
             }
         }
 
@@ -183,11 +213,17 @@ public class MixinNoiseChunkGenerator {
         this.effectiveThresholdOffset = thresholdMultiplier + thresholdOffset;
 
         // Pre-generate the slides to be applied to the terrain threshold.
+        double thresholdTopSlideTarget = noiseSettings.topSlideSettings().target();
+        double thresholdTopSlideSize = noiseSettings.topSlideSettings().size();
+        double thresholdTopSlideOffset = noiseSettings.topSlideSettings().offset();
+        double thresholdBottomSlideTarget = noiseSettings.bottomSlideSettings().target();
+        double thresholdBottomSlideSize = noiseSettings.bottomSlideSettings().size();
+        double thresholdBottomSlideOffset = noiseSettings.bottomSlideSettings().offset();
         int generationHeight = noiseSettings.height();
         thresholdSlideModifiers = new double[generationHeight];
         for (int y = 0; y < generationHeight; y++) {
             double thresholdSlideModifier = 0;
-            double yb = y * inverseVerticalNoiseResolution;
+            double yb = y * inverseVanillaLerpSizeVertical;
 
             if (thresholdTopSlideSize > 0) {
                 double tBase = ((this.chunkCountY - yb) - thresholdTopSlideOffset);
@@ -233,13 +269,11 @@ public class MixinNoiseChunkGenerator {
             int octave = 0;
             double freqXZ = blendNoiseXZScale;
             double freqY = blendNoiseYScale;
-            double amp = BLEND_NOISE_MAIN_AMPLITUDE;
             do {
                 blendingValue += newNoiseOctavesBlend[octave].noise3(worldX * freqXZ, worldY * freqY, worldZ * freqXZ,
-                        freqY * ratioFrequencyToSmooth) * amp;
+                        freqY * ratioFrequencyToSmooth) * blendAmplitudes[octave];
                 freqXZ *= 2.0;
                 freqY *= 2.0;
-                amp /= 2.0;
                 octave++;
             } while (octave < newNoiseOctavesBlend.length && blendingValue > -blendUncertaintyBounds[octave]
                     && blendingValue < blendUncertaintyBounds[octave]);
@@ -260,17 +294,15 @@ public class MixinNoiseChunkGenerator {
             int octave = 0;
             double freqXZ = noiseXZScale;
             double freqY = noiseYScale;
-            double amp = PRIMARY_NOISE_MAIN_AMPLITUDE;
             do {
                 if (blendingValue < 1)
-                    signValue += (1 - blendingValue) * amp * newNoiseOctaves1[octave].noise3(worldX * freqXZ,
+                    signValue += (1 - blendingValue) * primaryAmplitudes[octave] * newNoiseOctaves1[octave].noise3(worldX * freqXZ,
                             worldY * freqY, worldZ * freqXZ, freqY * ratioFrequencyToSmooth);
                 if (blendingValue > 0)
-                    signValue += blendingValue * amp * newNoiseOctaves2[octave].noise3(worldX * freqXZ, worldY * freqY,
+                    signValue += blendingValue * primaryAmplitudes[octave] * newNoiseOctaves2[octave].noise3(worldX * freqXZ, worldY * freqY,
                             worldZ * freqXZ, freqY * ratioFrequencyToSmooth);
                 freqXZ *= 2.0;
                 freqY *= 2.0;
-                amp /= 2.0;
                 octave++;
             } while (octave < newNoiseOctaves1.length && signValue > -primaryUncertaintyBounds[octave]
                     && signValue < primaryUncertaintyBounds[octave]);
@@ -308,7 +340,7 @@ public class MixinNoiseChunkGenerator {
                 Biome biome = weightMap.getBiome();
                 float biomeDepth = biome.getDepth();
                 float biomeScale = biome.getScale();
-                if (generationShapeConfig.isAmplified() && biomeDepth > 0.0f) {
+                if (noiseSettings.isAmplified() && biomeDepth > 0.0f) {
                     biomeDepth = 1.0f + biomeDepth * 2.0f;
                     biomeScale = 1.0f + biomeScale * 4.0f;
                 }
@@ -327,7 +359,7 @@ public class MixinNoiseChunkGenerator {
                     Biome biome = weightMap.getBiome();
                     float biomeDepth = biome.getDepth();
                     float biomeScale = biome.getScale();
-                    if (generationShapeConfig.isAmplified() && biomeDepth > 0.0f) {
+                    if (noiseSettings.isAmplified() && biomeDepth > 0.0f) {
                         biomeDepth = 1.0f + biomeDepth * 2.0f;
                         biomeScale = 1.0f + biomeScale * 4.0f;
                     }

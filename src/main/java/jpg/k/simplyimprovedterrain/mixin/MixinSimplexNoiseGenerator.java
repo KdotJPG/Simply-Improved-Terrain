@@ -1,10 +1,9 @@
 package jpg.k.simplyimprovedterrain.mixin;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import jpg.k.simplyimprovedterrain.mixinapi.ISimplexNoiseGenerator;
 import net.minecraft.util.math.MathHelper;
@@ -13,9 +12,14 @@ import net.minecraft.world.gen.SimplexNoiseGenerator;
 @Mixin(SimplexNoiseGenerator.class)
 public class MixinSimplexNoiseGenerator implements ISimplexNoiseGenerator {
 
+    @Shadow private int[] p;
+
     private static final double ROOT3 = Math.sqrt(3);
     private static final double SKEW_FACTOR_2D = 0.5 * (ROOT3 - 1);
     private static final double UNSKEW_FACTOR_2D = (3 - ROOT3) / 6;
+    private static final float RSQUARED_2D = 0.5f;
+    private static final double NORMALIZATION_DIVISOR_2D = 0.01001634121365712;
+    private static final double GRADIENT_MAGNITUDE_VARIATION = 0.7071067811865475;
 
     private static final double[] GRAD_VECTORS_2_24_128 = {
          0.130526192220052,  0.99144486137381,   0.38268343236509,   0.923879532511287,  0.608761429008721,  0.793353340291235,  0.793353340291235,  0.608761429008721,
@@ -53,61 +57,83 @@ public class MixinSimplexNoiseGenerator implements ISimplexNoiseGenerator {
     };
     static {
         // Normalize noise result so we don't need to do a multiply in the actual noise code.
-        for (int i = 0; i < GRAD_VECTORS_2_24_128.length; i++) GRAD_VECTORS_2_24_128[i] /= 0.01001634121365712;
+        for (int i = 0; i < GRAD_VECTORS_2_24_128.length; i++) GRAD_VECTORS_2_24_128[i] /= NORMALIZATION_DIVISOR_2D;
     }
 
     @Shadow
-    private int[] p;
+    private int p(int i) {
+        throw new AssertionError();
+    }
 
     @Override
     public int[] getPermTable() {
         return p;
     }
 
-    private double kernel2_24(int hash, double dx, double dy) {
-        double a = dx * dx + dy * dy;
-        if (a < 0.5) {
-            a -= 0.5;
-            a *= a; a *= a;
-            return a * (GRAD_VECTORS_2_24_128[hash & 0xFE] * dx + GRAD_VECTORS_2_24_128[hash | 0x01] * dy);
-        } else
-            return 0;
-    }
+    /**
+     * @author K.jpg
+     * @reason Replace with implementation that uses a wider gradient table.
+     */
+    @Overwrite
+    public double getValue(double x, double y) {
 
-    // Borrowed and modified
-    @Inject(method = "getValue(DD)D", at = @At("HEAD"), cancellable = true)
-    public void injectSample(double x, double y, CallbackInfoReturnable<Double> cir) {
-        double d = (x + y) * SKEW_FACTOR_2D;
-        int i = MathHelper.floor(x + d);
-        int j = MathHelper.floor(y + d);
-        double e = (double)(i + j) * UNSKEW_FACTOR_2D;
-        double f = (double)i - e;
-        double g = (double)j - e;
-        double h = x - f;
-        double k = y - g;
-        byte n;
-        byte o;
-        if(h > k) {
-            n = 1;
-            o = 0;
-        } else {
-            n = 0;
-            o = 1;
+        // Get points for A2* lattice
+        double s = SKEW_FACTOR_2D * (x + y);
+        double xs = x + s, ys = y + s;
+
+        // Get base points and offsets.
+        int xsb = MathHelper.floor(xs), ysb = MathHelper.floor(ys);
+        double xi = xs - xsb, yi = ys - ysb;
+
+        // Unskew.
+        double t = (xi + yi) * UNSKEW_FACTOR_2D;
+        double dx0 = xi + t, dy0 = yi + t;
+
+        // First vertex.
+        double value = 0;
+        double a0 = RSQUARED_2D - dx0 * dx0 - dy0 * dy0;
+        if (a0 > 0) {
+            value = (a0 * a0) * (a0 * a0) * grad(this.p(xsb + this.p(ysb)), dx0, dy0);
         }
 
-        double p = h - (double)n + UNSKEW_FACTOR_2D;
-        double q = k - (double)o + UNSKEW_FACTOR_2D;
-        double r = h - 1.0D + 2.0D * UNSKEW_FACTOR_2D;
-        double s = k - 1.0D + 2.0D * UNSKEW_FACTOR_2D;
-        int t = i & 255;
-        int u = j & 255;
-        int v = this.p[(t + this.p[u & 0xFF]) & 0xFF];
-        int w = this.p[(t + n + this.p[(u + o) & 0xFF]) & 0xFF];
-        int z = this.p[(t + 1 + this.p[(u + 1) & 0xFF]) & 0xFF];
-        double aa = this.kernel2_24(v, h, k);
-        double ab = this.kernel2_24(w, p, q);
-        double ac = this.kernel2_24(z, r, s);
-        cir.setReturnValue(aa + ab + ac);
-        cir.cancel();
+        // Second vertex.
+        double a1 = (2 * (1 + 2 * UNSKEW_FACTOR_2D) * (1 / UNSKEW_FACTOR_2D + 2)) * t + ((-2 * (1 + 2 * UNSKEW_FACTOR_2D) * (1 + 2 * UNSKEW_FACTOR_2D)) + a0);
+        if (a1 > 0) {
+            double dx1 = dx0 - (1 + 2 * UNSKEW_FACTOR_2D);
+            double dy1 = dy0 - (1 + 2 * UNSKEW_FACTOR_2D);
+            value += (a1 * a1) * (a1 * a1) * grad(this.p(xsb + 1 + this.p(ysb + 1)), dx1, dy1);
+        }
+
+        // Third vertex.
+        if (dy0 > dx0) {
+            double dx2 = dx0 - UNSKEW_FACTOR_2D;
+            double dy2 = dy0 - (UNSKEW_FACTOR_2D + 1);
+            double a2 = RSQUARED_2D - dx2 * dx2 - dy2 * dy2;
+            if (a2 > 0) {
+                value += (a2 * a2) * (a2 * a2) * grad(this.p(xsb + this.p(ysb + 1)), dx2, dy2);
+            }
+        } else {
+            double dx2 = dx0 - (UNSKEW_FACTOR_2D + 1);
+            double dy2 = dy0 - UNSKEW_FACTOR_2D;
+            double a2 = RSQUARED_2D - dx2 * dx2 - dy2 * dy2;
+            if (a2 > 0) {
+                value += (a2 * a2) * (a2 * a2) * grad(this.p(xsb + 1 + this.p(ysb)), dx2, dy2);
+            }
+        }
+
+        return value;
+    }
+
+    private double grad(int hash, double dx, double dy) {
+
+        // Ordinary noise gradient dot product.
+        double value = (GRAD_VECTORS_2_24_128[hash & 0xFE] * dx + GRAD_VECTORS_2_24_128[hash | 0x01] * dy);
+
+        // Old Simplex noise had variation in gradient magnitude dependent on direction.
+        // Here, re-implement that, independently of direction.
+        // This makes frozen ocean ice patches look good again.
+        if ((hash & 0x01) != 0) value *= GRADIENT_MAGNITUDE_VARIATION;
+
+        return value;
     }
 }

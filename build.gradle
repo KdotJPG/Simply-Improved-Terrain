@@ -13,7 +13,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 apply plugin: 'maven-publish'
 
-version = '0.3.3-Forge'
+version = '0.4.0-Forge'
 group = 'jpg.k.simplyimprovedterrain'
 archivesBaseName = 'simplyimprovedterrain'
 

@@ -10,7 +10,7 @@ Simply Improved Terrain rewrites some of the terrain generation components in Mi
 - Injects domain-rotation into existing unmitigated noise, so that other features can also take advantage.
 - Replaces the gradient vectors in 2D Simplex noise (used for surface block patterns) with a lattice-symmetric 24-sized set which reduces 45-degree artifacts.
 - Replaces End Island generator with full-resolution jittered metaballs to remove grid patterns, and allow intersecting islands to merge more nicely.
-- Removes sharp points from the disk-shaped sand/gravel/clay/ice deposits to make them more convincing. Also adds radius variation. Idea credit: Origin Realms.
+- Adds noise to and removes regular sharp points from the disk-shaped sand/gravel/clay/ice deposits to make them more convincing.
 - Replaces Overworld biome transition smoothing with scattered sampling to conceal the underlying 4x4-interval grid. Also makes rivers wider to avoid constrictions.
 - Removes directional bias from the netherrack patterns below ruined portal structures by replacing the `|Δx|+|Δz|` falloff with a Euclidean-based falloff.
 
