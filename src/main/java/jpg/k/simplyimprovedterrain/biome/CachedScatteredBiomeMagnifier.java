@@ -1,14 +1,14 @@
 package jpg.k.simplyimprovedterrain.biome;
 
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.source.BiomeAccess;
-import net.minecraft.world.biome.source.BiomeAccessType;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.biome.BiomeZoomer;
 
 import jpg.k.simplyimprovedterrain.biome.blending.LinkedBiomeWeightMap;
 import jpg.k.simplyimprovedterrain.biome.blending.ScatteredBiomeBlender;
 import jpg.k.simplyimprovedterrain.util.LinkedHashCache;
 
-public enum CachedScatteredBiomeAccessType implements BiomeAccessType {
+public enum CachedScatteredBiomeMagnifier implements BiomeZoomer {
     INSTANCE;
 
     private static final int N_ACTIVEMOST_NODES = 8;
@@ -18,19 +18,17 @@ public enum CachedScatteredBiomeAccessType implements BiomeAccessType {
     private static final double SCATTERED_BLENDER_PADDING = 4.0;
 
     private static final ScatteredBiomeBlender scatteredBiomeBlender = new ScatteredBiomeBlender(SCATTERED_BLENDER_FREQUENCY, SCATTERED_BLENDER_PADDING, 16);
-    private static final int gridPadding = (int)Math.ceil(scatteredBiomeBlender.getInternalBlendRadius() * 0.25) + 3; // TODO is 3 too much?
+    private static final int gridPadding = (int)Math.ceil(scatteredBiomeBlender.getInternalBlendRadius() * 0.25) + 3; // 3 could be more than needed. Might revisit.
     private static final int paddedGridWidth = 5 + 2 * gridPadding; // 1/4 chunk width, +1 for end bounds, + gridPadding on each side
     private static final int paddedGridWidthSq = paddedGridWidth * paddedGridWidth;
 
     private static LinkedHashCache<ProviderCoordinate, Biome[]> cache = new LinkedHashCache<>(N_ACTIVEMOST_NODES, CACHE_MAX_SIZE);
 
-    private void CachedScatteredBiomeAccessType() {
+    private void CachedScatteredBiomeMagnifier() { }
 
-    }
-
-    public Biome getBiome(long seed, int x, int y, int z, BiomeAccess.Storage storage) {
-        ProviderCoordinate key = new ProviderCoordinate(storage, seed, x & (int)0xFFFFFFF0, z & (int)0xFFFFFFF0);
-        Biome[] biomes = cache.get(key, CachedScatteredBiomeAccessType::generateBiomes);
+    public Biome getBiome(long seed, int x, int y, int z, BiomeManager.NoiseBiomeSource biomeReader) {
+        ProviderCoordinate key = new ProviderCoordinate(biomeReader, seed, x & (int)0xFFFFFFF0, z & (int)0xFFFFFFF0);
+        Biome[] biomes = cache.get(key, CachedScatteredBiomeMagnifier::generateBiomes);
         Biome biome = biomes.length != 1 ? biomes[((z & 0xF) << 4) | (x & 0xF)] : biomes[0];
         return biome;
     }
@@ -61,14 +59,14 @@ public enum CachedScatteredBiomeAccessType implements BiomeAccessType {
         }
     }
 
-    private static LinkedBiomeWeightMap generateBiomeBlending(BiomeAccess.Storage storage, long seed, int worldChunkX, int worldChunkZ) {
+    private static LinkedBiomeWeightMap generateBiomeBlending(BiomeManager.NoiseBiomeSource biomeReader, long seed, int worldChunkX, int worldChunkZ) {
         int worldChunkXScaled = worldChunkX >> 2;
         int worldChunkZScaled = worldChunkZ >> 2;
 
         Biome[] lookupGrid = new Biome[paddedGridWidthSq];
         for (int z = 0; z < paddedGridWidth; z++) {
             for (int x = 0; x < paddedGridWidth; x++) {
-                lookupGrid[z * paddedGridWidth + x] = storage.getBiomeForNoiseGen(x + (worldChunkXScaled - gridPadding), 0, z + (worldChunkZScaled - gridPadding));
+                lookupGrid[z * paddedGridWidth + x] = biomeReader.getNoiseBiome(x + (worldChunkXScaled - gridPadding), 0, z + (worldChunkZScaled - gridPadding));
             }
         }
 
@@ -91,7 +89,7 @@ public enum CachedScatteredBiomeAccessType implements BiomeAccessType {
                     double distSq = (rz - z) * (rz - z) + (rx - x) * (rx - x);
                     if (distSq >= closestRiverTileDistSq) continue;
                     Biome thisBiome = lookupGrid[(rz + (gridPadding - worldChunkZScaled)) * paddedGridWidth + (rx + (gridPadding - worldChunkXScaled))];
-                    if (thisBiome.getCategory() != Biome.Category.RIVER) continue;
+                    if (thisBiome.getBiomeCategory() != Biome.BiomeCategory.RIVER) continue;
                     biome = thisBiome;
                     closestRiverTileDistSq = distSq;
                 }
@@ -101,7 +99,7 @@ public enum CachedScatteredBiomeAccessType implements BiomeAccessType {
         });
     }
 
-    public static LinkedBiomeWeightMap generateBiomeBlendingAndCacheMap(BiomeAccess.Storage biomeReader, long seed, int worldChunkX, int worldChunkZ) {
+    public static LinkedBiomeWeightMap generateBiomeBlendingAndCacheMap(BiomeManager.NoiseBiomeSource biomeReader, long seed, int worldChunkX, int worldChunkZ) {
         LinkedBiomeWeightMap startEntry = generateBiomeBlending(biomeReader, seed, worldChunkX, worldChunkZ);
         ProviderCoordinate key = new ProviderCoordinate(biomeReader, seed, worldChunkX, worldChunkZ);
         cache.get(key, (k) -> generateBiomes(startEntry));
@@ -109,11 +107,11 @@ public enum CachedScatteredBiomeAccessType implements BiomeAccessType {
     }
 
     private static class ProviderCoordinate {
-        BiomeAccess.Storage biomeReader;
+        BiomeManager.NoiseBiomeSource biomeReader;
         long seed;
         int x, z;
 
-        public ProviderCoordinate(BiomeAccess.Storage biomeReader, long seed, int x, int z) {
+        public ProviderCoordinate(BiomeManager.NoiseBiomeSource biomeReader, long seed, int x, int z) {
             this.biomeReader = biomeReader;
             this.seed = seed;
             this.x = x;

@@ -1,6 +1,6 @@
 package jpg.k.simplyimprovedterrain.biome.blending;
 
-import net.minecraft.world.biome.Biome;
+import net.minecraft.world.level.biome.Biome;
 
 public class LinkedBiomeWeightMap {
     private Biome biome;

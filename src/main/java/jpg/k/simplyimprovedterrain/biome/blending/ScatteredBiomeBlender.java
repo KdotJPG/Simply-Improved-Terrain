@@ -2,7 +2,7 @@ package jpg.k.simplyimprovedterrain.biome.blending;
 
 import java.util.List;
 
-import net.minecraft.world.biome.Biome;
+import net.minecraft.world.level.biome.Biome;
 
 import jpg.k.simplyimprovedterrain.util.noise.pointgathering.*;
 
@@ -30,7 +30,6 @@ public class ScatteredBiomeBlender {
             int maxDxBeforeTruncate = Math.abs(dx) + 1;
             blendRadiusBound[i] = Math.sqrt(blendRadiusSq - maxDxBeforeTruncate);
         }
-
     }
 
     public LinkedBiomeWeightMap getBlendForChunk(long seed, int chunkBaseWorldX, int chunkBaseWorldZ, BiomeEvaluationCallback callback) {
@@ -61,11 +60,6 @@ public class ScatteredBiomeBlender {
 
         // If there is only one biome in range here, we can skip the actual blending step.
         if (linkedBiomeMapStartEntry != null && linkedBiomeMapStartEntry.getNext() == null) {
-            /*double[] weights = new double[chunkColumnCount];
-            linkedBiomeMapStartEntry.setWeights(weights);
-            for (int i = 0; i < chunkColumnCount; i++) {
-                weights[i] = 1.0;
-            }*/
             return linkedBiomeMapStartEntry;
         }
 

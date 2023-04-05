@@ -1,9 +1,5 @@
 package jpg.k.simplyimprovedterrain.util.noise;
 
-import java.awt.image.BufferedImage;
-import javax.imageio.ImageIO;
-import java.io.*;
-import javax.swing.*;
 import java.util.ArrayList;
 
 public class MetaballEndIslandNoise

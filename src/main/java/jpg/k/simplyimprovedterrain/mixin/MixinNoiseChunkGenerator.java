@@ -3,48 +3,49 @@ package jpg.k.simplyimprovedterrain.mixin;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
-import jpg.k.simplyimprovedterrain.biome.CachedScatteredBiomeAccessType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.structure.JigsawJunction;
-import net.minecraft.structure.PoolStructurePiece;
-import net.minecraft.structure.StructurePiece;
-import net.minecraft.structure.pool.StructurePool;
-import net.minecraft.util.math.noise.SimplexNoiseSampler;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.WorldAccess;
-import net.minecraft.world.biome.source.BiomeAccess;
-import net.minecraft.world.biome.source.BiomeSource;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.ProtoChunk;
-import net.minecraft.world.gen.ChunkRandom;
-import net.minecraft.world.gen.StructureAccessor;
-import net.minecraft.world.gen.chunk.ChunkGeneratorSettings;
-import net.minecraft.world.gen.chunk.GenerationShapeConfig;
-import net.minecraft.world.gen.chunk.NoiseChunkGenerator;
-import net.minecraft.world.gen.feature.StructureFeature;
-import net.minecraft.util.math.*;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.chunk.ChunkSection;
+
+import jpg.k.simplyimprovedterrain.biome.CachedScatteredBiomeMagnifier;
+import jpg.k.simplyimprovedterrain.biome.blending.LinkedBiomeWeightMap;
+import jpg.k.simplyimprovedterrain.mixinapi.IMixinSimplexNoise;
+import jpg.k.simplyimprovedterrain.util.noise.DomainRotatedShelfNoise;
+import jpg.k.simplyimprovedterrain.util.noise.MetaballEndIslandNoise;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.StructureFeatureManager;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.ProtoChunk;
+import net.minecraft.world.level.levelgen.*;
+import net.minecraft.world.level.levelgen.feature.StructureFeature;
+import net.minecraft.world.level.levelgen.feature.structures.JigsawJunction;
+import net.minecraft.world.level.levelgen.feature.structures.StructureTemplatePool;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.PoolElementStructurePiece;
+import net.minecraft.world.level.levelgen.structure.StructurePiece;
+import net.minecraft.world.level.levelgen.synth.SimplexNoise;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.Iterator;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import jpg.k.simplyimprovedterrain.biome.blending.ScatteredBiomeBlender;
-import jpg.k.simplyimprovedterrain.biome.blending.LinkedBiomeWeightMap;
-import jpg.k.simplyimprovedterrain.mixinapi.ISimplexNoiseSampler;
-import jpg.k.simplyimprovedterrain.util.noise.MetaballEndIslandNoise;
-import jpg.k.simplyimprovedterrain.util.noise.NeoNotchNoise;
 
-@Mixin(NoiseChunkGenerator.class)
+@Mixin(NoiseBasedChunkGenerator.class)
 public class MixinNoiseChunkGenerator {
 
     private static final double NOISE_MAIN_FREQUENCY = 684.412 / 32768.0;
@@ -54,42 +55,39 @@ public class MixinNoiseChunkGenerator {
     private static final int N_OCTAVES_PRIMARY = 6;
     private static final int N_OCTAVES_BLEND = 3;
 
-    private static final BlockState AIR = Blocks.AIR.getDefaultState();
+    private static final BlockState AIR = Blocks.AIR.defaultBlockState();
 
     @Shadow
-    protected Supplier<ChunkGeneratorSettings> settings;
+    protected Supplier<NoiseGeneratorSettings> settings;
 
     @Shadow
-    private int verticalNoiseResolution;
+    private int chunkHeight;
 
     @Shadow
-    private int horizontalNoiseResolution;
+    private int chunkWidth;
 
     @Shadow
-    private int noiseSizeY;
+    private int chunkCountY;
 
     @Shadow
-    public long worldSeed;
+    public long seed;
 
     @Shadow
-    protected ChunkRandom random;
+    protected WorldgenRandom random;
 
     @Shadow
-    private int worldHeight;
+    private int height;
 
     @Shadow
-    private SimplexNoiseSampler islandNoise;
+    private SimplexNoise islandNoise;
 
-    private NeoNotchNoise[] newNoiseOctaves1;
-    private NeoNotchNoise[] newNoiseOctaves2;
-    private NeoNotchNoise[] newNoiseOctavesBlend;
+    private DomainRotatedShelfNoise[] newNoiseOctaves1;
+    private DomainRotatedShelfNoise[] newNoiseOctaves2;
+    private DomainRotatedShelfNoise[] newNoiseOctavesBlend;
     private double[] primaryUncertaintyBounds;
     private double[] blendUncertaintyBounds;
 
     private BiomeSource biomeSource;
-    private int seaLevel;
-    private double inverseVerticalNoiseResolution;
-    private double inverseHorizontalNoiseResolution;
     private double noiseXZScale;
     private double noiseYScale;
     private double blendNoiseXZScale;
@@ -98,58 +96,59 @@ public class MixinNoiseChunkGenerator {
     private double effectiveThresholdMultiplier;
     private double effectiveThresholdOffset;
     private double[] thresholdSlideModifiers;
-    private int effectiveBiomeBlurKernelRadius;
 
-    private ScatteredBiomeBlender scatteredBiomeBlender;
-    private GenerationShapeConfig generationShapeConfig;
+    private NoiseSettings generationShapeConfig;
 
     boolean useEndIslandNoise;
 
-    @Inject(method = "<init>(Lnet/minecraft/world/biome/source/BiomeSource;Lnet/minecraft/world/biome/source/BiomeSource;JLjava/util/function/Supplier;)V", at = @At("TAIL"))
-    private void injectConstructor(BiomeSource biomeSource, BiomeSource biomeSource2, long worldSeed, Supplier<ChunkGeneratorSettings> supplier, CallbackInfo ci) {
+    @Inject(method = "<init>(Lnet/minecraft/world/level/biome/BiomeSource;Lnet/minecraft/world/level/biome/BiomeSource;JLjava/util/function/Supplier;)V", at = @At("TAIL"))
+    private void injectConstructor(BiomeSource biomeSource, BiomeSource biomeSource2, long worldSeed,
+                                   Supplier<NoiseGeneratorSettings> supplier, CallbackInfo cir) {
 
         this.biomeSource = biomeSource;
 
-        ChunkGeneratorSettings chunkGeneratorSettings = (ChunkGeneratorSettings)settings.get();
-        this.generationShapeConfig = chunkGeneratorSettings.getGenerationShapeConfig();
-
-        this.inverseVerticalNoiseResolution = 1.0 / verticalNoiseResolution;
-        this.inverseHorizontalNoiseResolution = 1.0 / horizontalNoiseResolution;
-
         // Generation configuration properties
-        double thresholdTopSlideTarget = (double) generationShapeConfig.getTopSlide().getTarget();
-        double thresholdTopSlideSize = (double) generationShapeConfig.getTopSlide().getSize();
-        double thresholdTopSlideOffset = (double) generationShapeConfig.getTopSlide().getOffset();
-        double thresholdBottomSlideTarget = (double) generationShapeConfig.getBottomSlide().getTarget();
-        double thresholdBottomSlideSize = (double) generationShapeConfig.getBottomSlide().getSize();
-        double thresholdBottomSlideOffset = (double) generationShapeConfig.getBottomSlide().getOffset();
-        this.noiseXZScale = NOISE_MAIN_FREQUENCY * generationShapeConfig.getSampling().getXZScale()
+        NoiseGeneratorSettings dimensionSettings = (NoiseGeneratorSettings) settings.get();
+        NoiseSettings noiseSettings = dimensionSettings.noiseSettings();
+        double inverseVerticalNoiseResolution = 1.0 / chunkHeight;
+        double inverseHorizontalNoiseResolution = 1.0 / chunkWidth;
+        double thresholdTopSlideTarget = noiseSettings.topSlideSettings().target();
+        double thresholdTopSlideSize = noiseSettings.topSlideSettings().size();
+        double thresholdTopSlideOffset = noiseSettings.topSlideSettings().offset();
+        double thresholdBottomSlideTarget = noiseSettings.bottomSlideSettings().target();
+        double thresholdBottomSlideSize = noiseSettings.bottomSlideSettings().size();
+        double thresholdBottomSlideOffset = noiseSettings.bottomSlideSettings().offset();
+        this.noiseXZScale = NOISE_MAIN_FREQUENCY * noiseSettings.noiseSamplingSettings().xzScale()
                 * inverseHorizontalNoiseResolution;
-        this.noiseYScale = NOISE_MAIN_FREQUENCY * generationShapeConfig.getSampling().getYScale()
+        this.noiseYScale = NOISE_MAIN_FREQUENCY * noiseSettings.noiseSamplingSettings().yScale()
                 * inverseVerticalNoiseResolution *  1.1;
         this.blendNoiseXZScale = BLEND_NOISE_RELATIVE_FREQUENCY * noiseXZScale
-                / generationShapeConfig.getSampling().getXZFactor();
+                / noiseSettings.noiseSamplingSettings().xzFactor();
         this.blendNoiseYScale = BLEND_NOISE_RELATIVE_FREQUENCY * noiseYScale
-                / generationShapeConfig.getSampling().getYFactor();
-        this.ratioFrequencyToSmooth = Math.sqrt(3) * 0.5 * verticalNoiseResolution;
-        this.seaLevel = chunkGeneratorSettings.getSeaLevel();
+                / noiseSettings.noiseSamplingSettings().yFactor();
+        this.ratioFrequencyToSmooth = Math.sqrt(3) * 0.5 * chunkHeight;
+        this.generationShapeConfig = noiseSettings;
 
         // Seed all the noise octaves.
-        newNoiseOctaves1 = new NeoNotchNoise[N_OCTAVES_PRIMARY];
-        newNoiseOctaves2 = new NeoNotchNoise[N_OCTAVES_PRIMARY];
-        newNoiseOctavesBlend = new NeoNotchNoise[N_OCTAVES_BLEND];
+        newNoiseOctaves1 = new DomainRotatedShelfNoise[N_OCTAVES_PRIMARY];
+        newNoiseOctaves2 = new DomainRotatedShelfNoise[N_OCTAVES_PRIMARY];
+        newNoiseOctavesBlend = new DomainRotatedShelfNoise[N_OCTAVES_BLEND];
         for (int i = 0; i < Math.max(N_OCTAVES_PRIMARY, N_OCTAVES_BLEND); i++) {
             if (i < N_OCTAVES_PRIMARY) {
-                newNoiseOctaves1[i] = new NeoNotchNoise(random);
-                newNoiseOctaves2[i] = new NeoNotchNoise(random);
+                newNoiseOctaves1[i] = new DomainRotatedShelfNoise(random);
+                newNoiseOctaves2[i] = new DomainRotatedShelfNoise(random);
             }
             if (i < N_OCTAVES_BLEND)
-                newNoiseOctavesBlend[i] = new NeoNotchNoise(random);
+                newNoiseOctavesBlend[i] = new DomainRotatedShelfNoise(random);
         }
 
-
         // for N_OCTAVES_PRIMARY = 4, this would generate
-        // { PRIMARY_NOISE_MAIN_AMPLITUDE * (1.0 + 0.5 + 0.25 + 0.125), PRIMARY_NOISE_MAIN_AMPLITUDE * (0.5 + 0.25 + 0.125), PRIMARY_NOISE_MAIN_AMPLITUDE * (0.25 + 0.125),  PRIMARY_NOISE_MAIN_AMPLITUDE * (0.125) };
+        // {
+        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (1.0 + 0.5 + 0.25 + 0.125),
+        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (0.5 + 0.25 + 0.125),
+        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (0.25 + 0.125),
+        //   PRIMARY_NOISE_MAIN_AMPLITUDE * (0.125)
+        // };
         primaryUncertaintyBounds = new double[N_OCTAVES_PRIMARY];
         {
             double maxValueSum = 0.0;
@@ -160,36 +159,38 @@ public class MixinNoiseChunkGenerator {
         }
 
         // for N_OCTAVES_BLEND = 3, this would generate
-        // { BLEND_NOISE_MAIN_AMPLITUDE * (0.5 + 0.25), BLEND_NOISE_MAIN_AMPLITUDE * (0.25) };
+        // {
+        //   BLEND_NOISE_MAIN_AMPLITUDE * (0.5 + 0.25),
+        //   BLEND_NOISE_MAIN_AMPLITUDE * (0.25)
+        // };
         if (N_OCTAVES_BLEND != 0) {
             blendUncertaintyBounds = new double[N_OCTAVES_BLEND];
             {
                 double maxValueSum = 0.0;
                 for (int i = N_OCTAVES_BLEND - 1; i >= 0; i--) {
                     maxValueSum += 1.0 / (1 << i);
-                    blendUncertaintyBounds[i] = BLEND_NOISE_MAIN_AMPLITUDE * maxValueSum + 0.5; // Note the +0.5
+                    // The + 0.5 defines a -0.5 to +0.5 range where we need the fully qualified noise value.
+                    blendUncertaintyBounds[i] = BLEND_NOISE_MAIN_AMPLITUDE * maxValueSum + 0.5;
                 }
             }
         }
 
-        this.scatteredBiomeBlender = new ScatteredBiomeBlender(0.3125 * inverseHorizontalNoiseResolution, horizontalNoiseResolution, 16);
-
         // Pre-calculate initial part of the thresholding formula.
-        double twiceInverseWorldHeight = 2.0 / generationShapeConfig.getHeight();
-        double thresholdMultiplier = generationShapeConfig.getDensityFactor();
-        double thresholdOffset = generationShapeConfig.getDensityOffset();
+        double twiceInverseWorldHeight = 2.0 / noiseSettings.height();
+        double thresholdMultiplier = noiseSettings.densityFactor();
+        double thresholdOffset = noiseSettings.densityOffset();
         this.effectiveThresholdMultiplier = -twiceInverseWorldHeight * thresholdMultiplier;
         this.effectiveThresholdOffset = thresholdMultiplier + thresholdOffset;
 
         // Pre-generate the slides to be applied to the terrain threshold.
-        int generationHeight = generationShapeConfig.getHeight();
+        int generationHeight = noiseSettings.height();
         thresholdSlideModifiers = new double[generationHeight];
         for (int y = 0; y < generationHeight; y++) {
             double thresholdSlideModifier = 0;
-            double yb = y * this.inverseVerticalNoiseResolution;
+            double yb = y * inverseVerticalNoiseResolution;
 
             if (thresholdTopSlideSize > 0) {
-                double tBase = ((this.noiseSizeY - yb) - thresholdTopSlideOffset);
+                double tBase = ((this.chunkCountY - yb) - thresholdTopSlideOffset);
                 if (tBase < thresholdTopSlideSize) {
                     if (tBase < 0)
                         tBase = 0;
@@ -211,9 +212,12 @@ public class MixinNoiseChunkGenerator {
             thresholdSlideModifiers[y] = thresholdSlideModifier;
         }
 
-        this.useEndIslandNoise = generationShapeConfig.hasIslandNoiseOverride();
+        // We'll use this to quickly check where we need to get our terrain shape parameters.
+        this.useEndIslandNoise = noiseSettings.islandNoiseOverride();
     }
 
+    // Dynamic noise layer skipping!
+    @Unique
     private double computeNecessaryNoiseOctaves(int worldX, int worldY, int worldZ, double startingValue) {
 
         // Final noise value begins with the threshold.
@@ -250,7 +254,8 @@ public class MixinNoiseChunkGenerator {
             }
         }
 
-        // Compute regular noise fractal(s). We don't always need to calculate all of the octaves. And most of the time, we only need to calculate one of the two fractals.
+        // Compute regular noise fractal(s). We don't always need to evaluate every octave.
+        // And most of the time, we only need to calculate one of the two fractals.
         {
             int octave = 0;
             double freqXZ = noiseXZScale;
@@ -275,26 +280,28 @@ public class MixinNoiseChunkGenerator {
         return signValue;
     }
 
-    private double[][][] getBlendedBiomeMap(int worldChunkX, int worldChunkZ) {
-        double[][] biomeBlendValues1 = new double[16][16];
-        double[][] biomeBlendValues2 = new double[16][16];
+    @Unique
+    private double[] getBlendedBiomeMap(int worldChunkX, int worldChunkZ) {
+        double[] biomeBlendValuesCombined = new double[16 * 16 * 2];
 
         if (useEndIslandNoise) {
 
-            for (int z = 0; z < 16; z++) {
+            for (int z = 0, index = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    double depth = MetaballEndIslandNoise.INSTANCE.getNoise(((ISimplexNoiseSampler)(Object) islandNoise).getPermTable(), worldChunkX + x, worldChunkZ + z);
-                    biomeBlendValues1[z][x] = depth;
-                    biomeBlendValues2[z][x] = depth > 0 ? 0.25 : 1;
+                    double depth = MetaballEndIslandNoise.INSTANCE.getNoise(
+                            ((IMixinSimplexNoise)islandNoise).getPermTable(),
+                            worldChunkX + x, worldChunkZ + z);
+                    biomeBlendValuesCombined[index++] = depth;
+                    biomeBlendValuesCombined[index++] = depth > 0 ? 0.25 : 1;
                 }
             }
 
-            // TODO rewrite this to more efficiently generate the entire chunk at once, a la ChunkPointGatherer.
+            // Note: this could be rewritten to efficiently generate for the entire chunk, a la ChunkPointGatherer.
 
         } else {
 
-            //LinkedBiomeWeightMap weightMap = scatteredBiomeBlender.getBlendForChunk(0, worldChunkX, worldChunkZ, (double x, double z) -> this.getBiomeDatapointAt(x, z));
-            LinkedBiomeWeightMap weightMap = CachedScatteredBiomeAccessType.generateBiomeBlendingAndCacheMap(this.biomeSource, BiomeAccess.hashSeed(this.worldSeed), worldChunkX, worldChunkZ);
+            LinkedBiomeWeightMap weightMap = CachedScatteredBiomeMagnifier.generateBiomeBlendingAndCacheMap(
+                    this.biomeSource, BiomeManager.obfuscateSeed(this.seed), worldChunkX, worldChunkZ);
 
             if (weightMap.getWeights() == null) {
 
@@ -308,11 +315,9 @@ public class MixinNoiseChunkGenerator {
                 double effectiveDepth = (biomeDepth * 0.5f - 0.125f) * 0.265625;
                 double effectiveScale = 96.0 / (biomeScale * 0.9f + 0.1f); // Inverse for threshold formula
 
-                for (int z = 0; z < 16; z++) {
-                    for (int x = 0; x < 16; x++) {
-                        biomeBlendValues1[z][x] = effectiveDepth;
-                        biomeBlendValues2[z][x] = effectiveScale;
-                    }
+                for (int i = 0; i < 16 * 16 * 2; i += 2) {
+                    biomeBlendValuesCombined[i + 0] = effectiveDepth;
+                    biomeBlendValuesCombined[i + 1] = effectiveScale;
                 }
 
             } else {
@@ -330,39 +335,37 @@ public class MixinNoiseChunkGenerator {
                     double effectiveScale = 96.0 / (biomeScale * 0.9f + 0.1f); // Inverse for threshold formula
                     effectiveDepth *= effectiveScale; // Bias blend towards biomes with less height variation
 
-                    for (int z = 0; z < 16; z++) {
-                        for (int x = 0; x < 16; x++) {
-                            double weight = weightMap.getWeights()[z * 16 + x];
-                            biomeBlendValues1[z][x] += weight * effectiveDepth;
-                            biomeBlendValues2[z][x] += weight * effectiveScale;
-                        }
+                    for (int i = 0; i < 16 * 16; i++) {
+                        double weight = weightMap.getWeights()[i];
+                        biomeBlendValuesCombined[i * 2 + 0] += weight * effectiveDepth;
+                        biomeBlendValuesCombined[i * 2 + 1] += weight * effectiveScale;
                     }
 
                     weightMap = weightMap.getNext();
                 } while (weightMap != null);
 
                 // Undo the division by scale
-                for (int z = 0; z < 16; z++) {
-                    for (int x = 0; x < 16; x++) {
-                        biomeBlendValues1[z][x] /= biomeBlendValues2[z][x];
-                    }
+                for (int i = 0; i < 16 * 16 * 2; i += 2) {
+                    biomeBlendValuesCombined[i + 0] /= biomeBlendValuesCombined[i + 1];
                 }
             }
         }
 
-        return new double[][][] { biomeBlendValues1, biomeBlendValues2 };
+        return biomeBlendValuesCombined;
     }
 
-    @Inject(method = "sampleHeightmap", at = @At("HEAD"), cancellable = true)
-    private void injectSampleHeightmap(int x, int z, BlockState[] states, Predicate<BlockState> predicate,
-                                       CallbackInfoReturnable<Integer> cir) {
+    @Inject(method = "iterateNoiseColumn", at = @At("HEAD"), cancellable = true)
+    private void injectIterateNoiseColumn(int x, int z, BlockState[] states, Predicate<BlockState> predicate, CallbackInfoReturnable<Integer> cir) {
 
         // Get full biome map for this chunk.
         // TODO we can optimize this by only generating the specific column.
-        // This method is called infrequently though. Mainly for village placement.
-        double[][][] blendedBiomeMap = getBlendedBiomeMap(x, z);
+        // This method is called infrequently though. Mainly for structure placement.
+        double[] biomeBlendValuesCombined = getBlendedBiomeMap(x, z);
+        int biomeBlendValuesBaseIndex = (((z & 15) << 4) | (x & 15)) << 1;
+        double effectiveDepth = biomeBlendValuesCombined[biomeBlendValuesBaseIndex | 0];
+        double effectiveScale = biomeBlendValuesCombined[biomeBlendValuesBaseIndex | 1];
 
-        for (int y = worldHeight - 1; y >= 0; y--) {
+        for (int y = height - 1; y >= 0; y--) {
 
             // Vanilla threshold formula, higher resolution
 
@@ -373,7 +376,7 @@ public class MixinNoiseChunkGenerator {
             // thresholdingValue += this.getWorldCoordRandomDensityAt(x, z) * generationShapeConfig.getDensityFactor();
 
             // Biome scale and depth offset from this particular location.
-            thresholdingValue = (thresholdingValue + blendedBiomeMap[0][z & 15][x & 15]) * blendedBiomeMap[1][z & 15][x & 15];
+            thresholdingValue = (thresholdingValue + effectiveDepth) * effectiveScale;
 
             // Make valleys less deep than mountains are tall
             if (thresholdingValue > 0) thresholdingValue *= 4;
@@ -387,113 +390,99 @@ public class MixinNoiseChunkGenerator {
             double noiseValue = computeNecessaryNoiseOctaves(x, y, z, thresholdingValue);
 
             // Set block based on thresholded noise sign and vertical position.
-            BlockState blockState = this.getBlockState(noiseValue, y);
-            if (states != null) {
+            BlockState blockState = this.generateBaseState(noiseValue, y);
+            if (states != null && states.length > y) {
                 states[y] = blockState;
             }
 
             if (predicate != null && predicate.test(blockState)) {
                 cir.setReturnValue(y + 1);
-                cir.cancel();
                 return;
             }
         }
 
         cir.setReturnValue(0);
-        cir.cancel();
     }
 
     @Shadow
-    protected BlockState getBlockState(double density, int y) {
+    protected BlockState generateBaseState(double density, int y) {
         throw new AssertionError();
     }
 
     @Shadow
-    private static double getNoiseWeight(int x, int y, int z) {
+    private static double getContribution(int x, int y, int z) {
         throw new AssertionError();
     }
 
-    @Inject(method = "populateNoise", at = @At("HEAD"), cancellable = true)
-    public void injectPopulateNoise(WorldAccess world, StructureAccessor accessor, Chunk chunk, CallbackInfo cir) {
-        ObjectList<StructurePiece> objectList = new ObjectArrayList<>(10);
-        ObjectList<JigsawJunction> objectList2 = new ObjectArrayList<>(32);
+    @Inject(method = "fillFromNoise", at = @At("HEAD"), cancellable = true)
+    public void injectFillFromNoise(LevelAccessor levelAccessor, StructureFeatureManager accessor, ChunkAccess chunk, CallbackInfo ci) {
+        ObjectList<StructurePiece> structurePieces = new ObjectArrayList<>(10);
+        ObjectList<JigsawJunction> jigsawJunctions = new ObjectArrayList<>(32);
         ChunkPos chunkPos = chunk.getPos();
-        int i = chunkPos.x;
-        int j = chunkPos.z;
-        int k = i << 4;
-        int l = j << 4;
+        int chunkX = chunkPos.x;
+        int chunkZ = chunkPos.z;
+        int chunkWorldX = chunkX << 4;
+        int chunkWorldZ = chunkZ << 4;
 
-        // Existing structure stuff
-        Iterator var11 = StructureFeature.field_24861.iterator();
-        while(var11.hasNext()) {
-            StructureFeature<?> structureFeature = (StructureFeature)var11.next();
-            accessor.getStructuresWithChildren(ChunkSectionPos.from(chunkPos, 0), structureFeature).forEach((start) -> {
-                Iterator var6 = start.getChildren().iterator();
-
-                while(true) {
-                    while(true) {
-                        StructurePiece structurePiece;
-                        do {
-                            if (!var6.hasNext()) {
-                                return;
+        for (StructureFeature<?> structure : StructureFeature.NOISE_AFFECTING_FEATURES) {
+            accessor.startsForFeature(SectionPos.of(chunkPos, 0), structure).forEach((p_236089_5_) -> {
+                for (StructurePiece structurepiece1 : p_236089_5_.getPieces()) {
+                    if (structurepiece1.isCloseToChunk(chunkPos, 12)) {
+                        if (structurepiece1 instanceof PoolElementStructurePiece) {
+                            PoolElementStructurePiece abstractvillagepiece = (PoolElementStructurePiece)structurepiece1;
+                            StructureTemplatePool.Projection jigsawpattern$placementbehaviour = abstractvillagepiece.getElement().getProjection();
+                            if (jigsawpattern$placementbehaviour == StructureTemplatePool.Projection.RIGID) {
+                                structurePieces.add(abstractvillagepiece);
                             }
 
-                            structurePiece = (StructurePiece)var6.next();
-                        } while(!structurePiece.intersectsChunk(chunkPos, 12));
-
-                        if (structurePiece instanceof PoolStructurePiece) {
-                            PoolStructurePiece poolStructurePiece = (PoolStructurePiece)structurePiece;
-                            StructurePool.Projection projection = poolStructurePiece.getPoolElement().getProjection();
-                            if (projection == StructurePool.Projection.RIGID) {
-                                objectList.add(poolStructurePiece);
-                            }
-
-                            Iterator var10 = poolStructurePiece.getJunctions().iterator();
-
-                            while(var10.hasNext()) {
-                                JigsawJunction jigsawJunction = (JigsawJunction)var10.next();
-                                int kx = jigsawJunction.getSourceX();
-                                int lx = jigsawJunction.getSourceZ();
-                                if (kx > k - 12 && lx > l - 12 && kx < k + 15 + 12 && lx < l + 15 + 12) {
-                                    objectList2.add(jigsawJunction);
+                            for (JigsawJunction jigsawjunction1 : abstractvillagepiece.getJunctions()) {
+                                int l5 = jigsawjunction1.getSourceX();
+                                int i6 = jigsawjunction1.getSourceZ();
+                                if (l5 > chunkWorldX - 12 && i6 > chunkWorldZ - 12 && l5 < chunkWorldX + 15 + 12 && i6 < chunkWorldZ + 15 + 12) {
+                                    jigsawJunctions.add(jigsawjunction1);
                                 }
                             }
                         } else {
-                            objectList.add(structurePiece);
+                            structurePieces.add(structurepiece1);
                         }
                     }
                 }
+
             });
         }
 
         // Get full biome map for this chunk.
-        double[][][] blendedBiomeMap = getBlendedBiomeMap(k, l);
+        double[] biomeBlendValuesCombined = getBlendedBiomeMap(chunkWorldX, chunkWorldZ);
 
+        // We'll be using these just like Vanilla does.
         ProtoChunk protoChunk = (ProtoChunk) chunk;
-        Heightmap oceanFloorHeightmap = protoChunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
-        Heightmap worldSurfaceHeightmap = protoChunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
-        BlockPos.Mutable blockPosMutable = new BlockPos.Mutable();
-        ObjectListIterator<StructurePiece> villagePieceIterator = objectList.iterator();
-        ObjectListIterator<JigsawJunction> jigsawJunctionIterator = objectList2.iterator();
+        Heightmap oceanFloorHeightmap = protoChunk.getOrCreateHeightmapUnprimed(Heightmap.Types.OCEAN_FLOOR_WG);
+        Heightmap worldSurfaceHeightmap = protoChunk.getOrCreateHeightmapUnprimed(Heightmap.Types.WORLD_SURFACE_WG);
+        BlockPos.MutableBlockPos blockPosMutable = new BlockPos.MutableBlockPos();
+        ObjectListIterator<StructurePiece> villagePieceIterator = structurePieces.iterator();
+        ObjectListIterator<JigsawJunction> jigsawJunctionIterator = jigsawJunctions.iterator();
 
         // 16xHx16 chunks are divided into 16x16x16 sections. Start at the top one.
-        ChunkSection chunksection = protoChunk.getSection((worldHeight - 1) >> 4);
-        chunksection.lock();
+        LevelChunkSection chunksection = protoChunk.getOrCreateSection((height - 1) >> 4);
+        chunksection.acquire();
 
-        for (int y = worldHeight - 1; y >= 0; y--) {
+        // Chunk Y loop
+        for (int y = height - 1; y >= 0; y--) {
             int chunkSectionIndex = y >> 4;
             int chunkSectionY = y & 15;
 
-            if (chunksection.getYOffset() >> 4 != chunkSectionIndex) {
-                chunksection.unlock();
-                chunksection = protoChunk.getSection(chunkSectionIndex);
-                chunksection.lock();
+            // Chunk section transition
+            if (chunksection.bottomBlockY() >> 4 != chunkSectionIndex) {
+                chunksection.release();
+                chunksection = protoChunk.getOrCreateSection(chunkSectionIndex);
+                chunksection.acquire();
             }
 
+            // Chunk XZ loop
             for (int z = 0; z < 16; z++) {
-                int worldZ = l | z;
+                int worldZ = chunkWorldZ | z;
                 for (int x = 0; x < 16; x++) {
-                    int worldX = k | x;
+                    int worldX = chunkWorldX | x;
 
                     // Vanilla threshold formula, higher resolution
 
@@ -504,67 +493,77 @@ public class MixinNoiseChunkGenerator {
                     // thresholdingValue += this.getWorldCoordRandomDensityAt(x, z) * generationShapeConfig.getDensityFactor();
 
                     // Biome scale and depth offset
-                    thresholdingValue = (thresholdingValue + blendedBiomeMap[0][z][x]) * blendedBiomeMap[1][z][x];
+                    int biomeBlendValuesBaseIndex = ((z << 4) | x) << 1;
+                    double effectiveDepth = biomeBlendValuesCombined[biomeBlendValuesBaseIndex | 0];
+                    double effectiveScale = biomeBlendValuesCombined[biomeBlendValuesBaseIndex | 1];
+                    thresholdingValue = (thresholdingValue + effectiveDepth) * effectiveScale;
 
                     // Make valleys less deep than mountains are tall
                     if (thresholdingValue > 0) thresholdingValue *= 4;
 
-                    // Apply pregenerated slide modifiers from the NoiseSettings/GenerationShapeConfig. Important for The End in particular.
+                    // Apply pregenerated slide modifiers from the NoiseSettings/GenerationShapeConfig.
+                    // Important for The End in particular.
                     thresholdingValue += this.thresholdSlideModifiers[y];
 
                     // Apply terrain noise in full-resolution.
-                    // Important optimization: We don't always need to calculate all of the octaves. Outside of biome height range, we even skip them all.
+                    // Important optimization: We don't always need to calculate all of the octaves.
+                    //                         Outside of biome height range, we even skip them all.
                     // After all, we really only need the sign of the value.
                     double noiseSignValue = computeNecessaryNoiseOctaves(worldX, y, worldZ, thresholdingValue);
 
                     // Optimization: If the threshold was too big for the noise to kick in, we should be nowhere near placing a structure.
+                    // Note: It would be technically ideal to apply this before noise, so the skipping can adapt to it.
+                    //       But the clamp makes things tricker and this doesn't really create any issues in practice.
                     if (noiseSignValue != thresholdingValue) {
-                        noiseSignValue = MathHelper.clamp(noiseSignValue / 200.0D, -1.0D, 1.0D);
+                        noiseSignValue = Mth.clamp(noiseSignValue / 200.0, -1.0, 1.0);
 
+                        // Existing structure terraforming stuff
                         int vXBound, vYBound, vZBound;
-                        for(noiseSignValue = noiseSignValue / 2.0D - noiseSignValue * noiseSignValue * noiseSignValue / 24.0D;
-                            villagePieceIterator.hasNext();
-                            noiseSignValue += getNoiseWeight(vXBound, vYBound, vZBound) * 0.8D) {
-                            StructurePiece structurePiece = (StructurePiece)villagePieceIterator.next();
-                            BlockBox blockBox = structurePiece.getBoundingBox();
-                            vXBound = Math.max(0, Math.max(blockBox.minX - worldX, worldX - blockBox.maxX));
-                            vYBound = y - (blockBox.minY + (structurePiece instanceof PoolStructurePiece ?
-                                    ((PoolStructurePiece)structurePiece).getGroundLevelDelta() : 0));
-                            vZBound = Math.max(0, Math.max(blockBox.minZ - worldZ, worldZ - blockBox.maxZ));
+                        for (noiseSignValue = noiseSignValue / 2.0
+                                - noiseSignValue * noiseSignValue * noiseSignValue / 24.0; villagePieceIterator
+                                     .hasNext(); noiseSignValue += getContribution(vXBound, vYBound, vZBound)
+                                * 0.8) {
+                            StructurePiece structurePiece = villagePieceIterator.next();
+                            BoundingBox blockBox = structurePiece.getBoundingBox();
+                            vXBound = Math.max(0, Math.max(blockBox.x0 - worldX, worldX - blockBox.x1));
+                            vYBound = y - (blockBox.y0 + (structurePiece instanceof PoolElementStructurePiece
+                                    ? ((PoolElementStructurePiece) structurePiece).getGroundLevelDelta() : 0));
+                            vZBound = Math.max(0, Math.max(blockBox.z0 - worldZ, worldZ - blockBox.z1));
                         }
-                        villagePieceIterator.back(objectList.size());
+                        villagePieceIterator.back(structurePieces.size());
 
-                        while(jigsawJunctionIterator.hasNext()) {
-                            JigsawJunction jigsawJunction = (JigsawJunction)jigsawJunctionIterator.next();
+                        // Existing structure terraforming stuff
+                        while (jigsawJunctionIterator.hasNext()) {
+                            JigsawJunction jigsawJunction = (JigsawJunction) jigsawJunctionIterator.next();
                             int as = worldX - jigsawJunction.getSourceX();
                             vXBound = y - jigsawJunction.getSourceGroundY();
                             vYBound = worldZ - jigsawJunction.getSourceZ();
-                            noiseSignValue += getNoiseWeight(as, vXBound, vYBound) * 0.4D;
+                            noiseSignValue += getContribution(as, vXBound, vYBound) * 0.4;
                         }
-                        jigsawJunctionIterator.back(objectList2.size());
+                        jigsawJunctionIterator.back(jigsawJunctions.size());
                     }
 
                     // Set block based on the above, and the Y coordinate.
-                    BlockState blockState = this.getBlockState(noiseSignValue, y);
+                    BlockState blockState = this.generateBaseState(noiseSignValue, y);
 
                     // Update heightmap data.
                     if (blockState != AIR) {
-                        if(blockState.getLuminance() != 0) {
+                        if (blockState.getLightBlock(protoChunk, blockPosMutable) != 0) {
                             blockPosMutable.set(worldX, y, worldZ);
-                            protoChunk.addLightSource(blockPosMutable);
+                            protoChunk.addLight(blockPosMutable);
                         }
 
                         chunksection.setBlockState(x, chunkSectionY, z, blockState, false);
-                        oceanFloorHeightmap.trackUpdate(x, y, z, blockState);
-                        worldSurfaceHeightmap.trackUpdate(x, y, z, blockState);
+                        oceanFloorHeightmap.update(x, y, z, blockState);
+                        worldSurfaceHeightmap.update(x, y, z, blockState);
                     }
                 }
             }
         }
 
-        chunksection.unlock();
+        chunksection.release();
 
-        cir.cancel();
+        ci.cancel();
     }
 
 }
