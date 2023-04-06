@@ -7,9 +7,12 @@ import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import jpg.k.simplyimprovedterrain.biome.CachedScatteredBiomeMagnifier;
 import jpg.k.simplyimprovedterrain.biome.blending.LinkedBiomeWeightMap;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinSimplexNoise;
+import jpg.k.simplyimprovedterrain.util.ReflectionUtils;
 import jpg.k.simplyimprovedterrain.util.noise.DomainRotatedShelfNoise;
 import jpg.k.simplyimprovedterrain.util.noise.MetaballEndIslandNoise;
 
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.MappingResolver;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
@@ -98,14 +101,21 @@ public class MixinNoiseChunkGenerator {
     private double[] thresholdSlideModifiers;
 
     private NoiseSettings generationShapeConfig;
-
     boolean useEndIslandNoise;
+
+    boolean fillNoiseColumnOverridden;
 
     @Inject(method = "<init>(Lnet/minecraft/world/level/biome/BiomeSource;Lnet/minecraft/world/level/biome/BiomeSource;JLjava/util/function/Supplier;)V", at = @At("TAIL"))
     private void injectConstructor(BiomeSource biomeSource, BiomeSource biomeSource2, long worldSeed,
                                    Supplier<NoiseGeneratorSettings> supplier, CallbackInfo cir) {
 
         this.biomeSource = biomeSource;
+
+        // If another mod overrides makeAndFillNoiseColumn or fillNoiseColumn in a subclass,
+        // prefer mod compatibility over terrain shape changes.
+        if (this.fillNoiseColumnOverridden) return;
+        this.fillNoiseColumnOverridden = ReflectionUtils.isMethodOverridden(NoiseBasedChunkGenerator.class, this.getClass(), "method_16405", void.class, double[].class, int.class, int.class)
+                || ReflectionUtils.isMethodOverridden(NoiseBasedChunkGenerator.class, this.getClass(), "method_16406", double[].class, int.class, int.class);
 
         // Generation configuration properties
         NoiseGeneratorSettings dimensionSettings = (NoiseGeneratorSettings) settings.get();
@@ -357,6 +367,10 @@ public class MixinNoiseChunkGenerator {
     @Inject(method = "iterateNoiseColumn", at = @At("HEAD"), cancellable = true)
     private void injectIterateNoiseColumn(int x, int z, BlockState[] states, Predicate<BlockState> predicate, CallbackInfoReturnable<Integer> cir) {
 
+        // If another mod overrides makeAndFillNoiseColumn or fillNoiseColumn in a subclass,
+        // prefer mod compatibility over terrain shape changes.
+        if (this.fillNoiseColumnOverridden) return;
+
         // Get full biome map for this chunk.
         // TODO we can optimize this by only generating the specific column.
         // This method is called infrequently though. Mainly for structure placement.
@@ -416,6 +430,11 @@ public class MixinNoiseChunkGenerator {
 
     @Inject(method = "fillFromNoise", at = @At("HEAD"), cancellable = true)
     public void injectFillFromNoise(LevelAccessor levelAccessor, StructureFeatureManager accessor, ChunkAccess chunk, CallbackInfo ci) {
+
+        // If another mod overrides makeAndFillNoiseColumn or fillNoiseColumn in a subclass,
+        // prefer mod compatibility over terrain shape changes.
+        if (this.fillNoiseColumnOverridden) return;
+
         ObjectList<StructurePiece> structurePieces = new ObjectArrayList<>(10);
         ObjectList<JigsawJunction> jigsawJunctions = new ObjectArrayList<>(32);
         ChunkPos chunkPos = chunk.getPos();
