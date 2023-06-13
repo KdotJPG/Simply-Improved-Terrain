@@ -1,0 +1,47 @@
+{
+    "schema_version": 1,
+  "mixin": [
+    "simplyimprovedterrain.mixins.json",
+    "simplyimprovedterrain-common.mixins.json"
+  ],
+  "quilt_loader": {
+    "group": "${group}",
+    "id": "simplyimprovedterrain",
+    "version": "${version}",
+    "name": "Simply Improved Terrain",
+    "description": "Rewrites terrain generation components in Minecraft to improve their visual results.",
+    "authors": [
+      "K.jpg"
+    ],
+    "contact": {
+      "sources": "https://github.com/KdotJPG/Simply-Improved-Terrain"
+    },
+    "license": "MIT License",
+    "icon": "assets/simplyimprovedterrain/icon.png",
+    "intermediate_mappings": "net.fabricmc:intermediary",
+    "environment": "*",
+    "entrypoints": {
+      "init": [
+        "jpg.k.simplyimprovedterrain.quilt.SimplyImprovedTerrainQuilt"
+      ]
+    },
+    "depends": [
+      {
+        "id": "quilt_loader",
+        "version": "*"
+      },
+      {
+        "id": "quilt_base",
+        "version": "*"
+      },
+      {
+        "id": "minecraft",
+        "version": ">=1.19.4"
+      },
+      {
+        "id": "architectury",
+        "version": ">=8.1.79"
+      }
+    ]
+  }
+}

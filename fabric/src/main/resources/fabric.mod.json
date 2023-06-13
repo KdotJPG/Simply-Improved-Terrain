@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "simplyimprovedterrain",
+  "version": "${version}",
+  "name": "Simply Improved Terrain",
+  "description": "Rewrites terrain generation components in Minecraft to improve their visual results.",
+  "authors": [
+    "K.jpg"
+  ],
+  "contact": {
+    "sources": "https://github.com/KdotJPG/Simply-Improved-Terrain"
+  },
+  "license": "MIT License",
+  "icon": "assets/simplyimprovedterrain/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "jpg.k.simplyimprovedterrain.fabric.SimplyImprovedTerrainFabric"
+    ]
+  },
+  "mixins": [
+    "simplyimprovedterrain.mixins.json",
+    "simplyimprovedterrain-common.mixins.json"
+  ],
+  "depends": {
+    "fabric": "*",
+    "minecraft": ">=1.19.4"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "required": true,
+  "package": "jpg.k.simplyimprovedterrain.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "minVersion": "0.8",
+  "client": [
+  ],
+  "mixins": [
+    "FixinMulOrAdd",
+    "MixinBiomeManager",
+    "MixinBlendedNoise",
+    "MixinClimateSampler",
+    "MixinDiskFeature",
+    "MixinEndIslandDensityFunction",
+    "MixinMultiNoiseBiomeSource",
+    "MixinPerlinFractalNoise",
+    "MixinRandomState",
+    "MixinRuinedPortalPiece",
+    "MixinShelfEnabledNoise",
+    "MixinSimplexNoise",
+    "MixinTheEndBiomeSource"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
