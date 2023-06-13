@@ -1,10 +1,8 @@
-package jpg.k.simplyimprovedterrain.terrain;
+package jpg.k.simplyimprovedterrain.terrain.customdensityfunctions;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinBlendedNoise;
 import jpg.k.simplyimprovedterrain.mixinapi.IMixinPerlinFractalNoise;
-import net.minecraft.core.Registry;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringRepresentable;
@@ -17,14 +15,7 @@ import java.util.Objects;
 
 import static net.minecraft.core.Registry.register;
 
-public class SplitBlendedNoise {
-
-    public static void bootstrap(Registry<Codec<? extends DensityFunction>> registry) {
-        Registry.register(registry, "blended_noise_combine", SplitBlendedNoise.BlendedNoiseCombine.CODEC.codec());
-        for (var blendedNoisePartType : SplitBlendedNoise.BlendedNoisePart.Type.values()) {
-            Registry.register(registry, blendedNoisePartType.getSerializedName(), blendedNoisePartType.codec.codec());
-        }
-    }
+public final class SplitBlendedNoise {
 
     // Adapted from Vanilla
     private static final double MAIN_NOISE_DIVISOR = 20.0;
@@ -33,7 +24,7 @@ public class SplitBlendedNoise {
     private static final double FINAL_NOISE_MULTIPLIER = 1.0 / FINAL_NOISE_DIVISOR;
 
     // Need to evaluate the noise slightly past the true useful range, so interpolation picks up what it needs to.
-    // TODO update docs. This is use for range choice.
+    // TODO update docs. This is used for range choice.
     private static final double NOISE_EVALUTION_BUFFER = 1.0;
     public static final double MAIN_NOISE_MAX_TO_EVALUATE_1ST_HALF = (NOISE_EVALUTION_BUFFER + 0.5) * MAIN_NOISE_DIVISOR;
     public static final double MAIN_NOISE_MIN_TO_EVALUATE_2ND_HALF = (-NOISE_EVALUTION_BUFFER - 0.5) * MAIN_NOISE_DIVISOR;
@@ -100,6 +91,7 @@ public class SplitBlendedNoise {
             return Objects.hash(minLimitNoise, maxLimitNoise, mainNoise);
         }
 
+        public static final String SERIALIZED_NAME = "split_blended_noise_combine";
         public static final KeyDispatchDataCodec<BlendedNoiseCombine> CODEC = KeyDispatchDataCodec.of(RecordCodecBuilder.mapCodec((instance) -> {
             return instance.group(
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("min_limit_noise").forGetter(BlendedNoiseCombine::minLimitNoise),
@@ -197,6 +189,7 @@ public class SplitBlendedNoise {
         }
 
         @Override
+        @SuppressWarnings("deprecation")
         public double compute(FunctionContext functionContext) {
             int x = functionContext.blockX();
             int y = functionContext.blockY();
