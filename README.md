@@ -12,4 +12,5 @@ Simply Improved Terrain rewrites some of the terrain generation components in Mi
 - Cleans up interval-lock from biome border surface patterns by correcting the sample loop range, switching to aggregated weight falloff, and bypassing subsampling.
 - Removes grid effects from the End island generator, and smoothes intersection transitions, by switching to full-resolution metaballs.
 - Breaks up monotony in circular sand/gravel/clay/ice deposits by adding falloff noise.
+- Rounds out shape distributions of lava lake features by switching to isotropic ellipsoid placement formulas. Also adds subtle variation to barriers.
 - Removes cardinal direction bias from ruined portal netherrack spreads by switching to a Euclidean distance metric.

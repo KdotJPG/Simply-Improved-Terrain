@@ -12,6 +12,7 @@
     "MixinClimateSampler",
     "MixinDiskFeature",
     "MixinEndIslandDensityFunction",
+    "MixinLakeFeature",
     "MixinMultiNoiseBiomeSource",
     "MixinPerlinFractalNoise",
     "MixinRandomState",
