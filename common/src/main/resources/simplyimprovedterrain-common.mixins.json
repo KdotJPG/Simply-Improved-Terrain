@@ -16,6 +16,7 @@
     "MixinLakeFeature",
     "MixinMultiNoiseBiomeSource",
     "MixinPerlinFractalNoise",
+    "MixinRandomPatchFeature",
     "MixinRandomState",
     "MixinRuinedPortalPiece",
     "MixinShelfEnabledNoise",

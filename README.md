@@ -13,4 +13,4 @@ Simply Improved Terrain rewrites some of the terrain generation components in Mi
 - Removes grid effects from the End island generator, and smoothes intersection transitions, by switching to full-resolution metaballs.
 - Breaks up monotony in circular sand/gravel/clay/ice deposits by adding falloff noise.
 - Rounds out shape distributions of lava lake features by switching to isotropic ellipsoid placement formulas. Also adds subtle variation to barriers.
-- Removes cardinal direction bias from spread patterns under ruined portals and basalt columns by moving to Euclidean distance metrics.
+- Removes cardinal direction bias from ruined portal, basalt column, and random patch spreads by moving to Euclidean distance metrics.
