@@ -37,6 +37,7 @@ public class TerrainFormulaModification {
     private static <T> T translateFormula(T subject, BiFunction<T, DensityFunction.Visitor, T> mapAllFunction, HolderGetter<NormalNoise.NoiseParameters> noiseParametersRegistry) {
         subject = mapAllFunction.apply(subject, RemoveHoldersVisitor.INSTANCE);
         subject = mapAllFunction.apply(subject, AddCourseAlteringNodesVisitor.INSTANCE);
+        subject = mapAllFunction.apply(subject, MarkObligate2DFunctionsVisitor.INSTANCE);
         subject = mapAllFunction.apply(subject, CleanUpMarkersVisitor.DEFAULT);
         subject = mapAllFunction.apply(subject, SimplifyConstantExpressionsVisitor.INSTANCE);
         //subject = mapAllFunction.apply(subject, ConsolidateNestedAssociativeFunctionsVisitor.INSTANCE); // TODO

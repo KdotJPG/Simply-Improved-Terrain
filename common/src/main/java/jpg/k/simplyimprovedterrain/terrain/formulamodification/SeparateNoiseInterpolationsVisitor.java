@@ -99,6 +99,10 @@ enum SeparateNoiseInterpolationsVisitor implements CourseAlteringVisitor {
                     }
                     default -> defaultInterpolateArguments(function);
                 };
+            },
+            DensityFunctions.YClampedGradient.class, (DensityFunction function) -> {
+                if (!(function instanceof DensityFunctions.YClampedGradient)) return defaultInterpolateArguments(function);
+                return function; // YClampedGradient has no arguments of its own; just pull it out of interpolation.
             }
     );
 
@@ -119,7 +123,6 @@ enum SeparateNoiseInterpolationsVisitor implements CourseAlteringVisitor {
     }
 
     private static class CheckForNoiseInUnapprovedInterpolatedFunctionsVisitor implements CourseAlteringVisitor {
-
         private State state;
 
         public CheckForNoiseInUnapprovedInterpolatedFunctionsVisitor() {
@@ -137,10 +140,15 @@ enum SeparateNoiseInterpolationsVisitor implements CourseAlteringVisitor {
                 return function;
             }
 
-            // If we've found noise, mark it.
-            if (NoiseFunctionUtils.isNoise(function)) {
-                state = State.FOUND_NOISE;
+            // If we've found a function that requires consideration when it comes to interpolation, indicate such.
+            // We also expect such functions to be leaf nodes only, so don't call mapAll to traverse further.
+            InterpolationProblemUtils.InterpolationProblem interpolationProblem = InterpolationProblemUtils.checkInterpolationProblem(function);
+            if (interpolationProblem == InterpolationProblemUtils.InterpolationProblem.NEVER_INTERPOLATE) {
+                state = State.FOUND_NOISE_IN_UNAPPROVED_FUNCTION;
                 return function; // We expect noise to be leaf nodes only, so don't traverse further.
+            } else if (interpolationProblem == InterpolationProblemUtils.InterpolationProblem.NOT_IN_UNAPPROVED_FUNCTIONS) {
+                state = State.FOUND_NOISE;
+                return function; // Ditto.
             }
 
             // Use new visitor instance just for this subtree.

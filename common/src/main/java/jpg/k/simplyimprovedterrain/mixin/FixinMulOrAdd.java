@@ -11,8 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(DensityFunctions.MulOrAdd.class)
 public class FixinMulOrAdd {
 
-    @Unique
-    @Inject(method = "mapAll", at = @At("TAIL"), cancellable = true)
+    @Inject(method = "mapAll", at = @At("RETURN"), cancellable = true)
     public void injectMapAll(DensityFunction.Visitor visitor, CallbackInfoReturnable<DensityFunction> cir) {
         cir.setReturnValue(visitor.apply(cir.getReturnValue()));
     }
