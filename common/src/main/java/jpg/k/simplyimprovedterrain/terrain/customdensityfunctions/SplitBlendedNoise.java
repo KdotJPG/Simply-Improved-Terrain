@@ -13,8 +13,6 @@ import net.minecraft.world.level.levelgen.synth.PerlinNoise;
 
 import java.util.Objects;
 
-import static net.minecraft.core.Registry.register;
-
 public final class SplitBlendedNoise {
 
     // Adapted from Vanilla

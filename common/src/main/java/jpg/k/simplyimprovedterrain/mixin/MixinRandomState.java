@@ -2,7 +2,6 @@ package jpg.k.simplyimprovedterrain.mixin;
 
 import jpg.k.simplyimprovedterrain.terrain.formulamodification.TerrainFormulaModification;
 import net.minecraft.core.HolderGetter;
-import net.minecraft.core.Registry;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.RandomState;

@@ -1,8 +1,6 @@
 package jpg.k.simplyimprovedterrain.terrain.customdensityfunctions;
 
 import com.mojang.serialization.Codec;
-import jpg.k.simplyimprovedterrain.SimplyImprovedTerrain;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 import java.util.function.BiConsumer;

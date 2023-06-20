@@ -1,10 +1,7 @@
 package jpg.k.simplyimprovedterrain.terrain.formulamodification;
 
 import com.mojang.serialization.Codec;
-import jpg.k.simplyimprovedterrain.SimplyImprovedTerrain;
 import net.minecraft.core.HolderGetter;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;

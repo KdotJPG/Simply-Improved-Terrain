@@ -5,7 +5,6 @@ import jpg.k.simplyimprovedterrain.SimplyImprovedTerrain;
 import net.minecraft.core.registries.Registries;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.RegisterEvent;
 
 @Mod(SimplyImprovedTerrain.MOD_ID)
