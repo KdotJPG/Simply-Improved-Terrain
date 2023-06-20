@@ -1,7 +1,7 @@
 package jpg.k.simplyimprovedterrain.mixin;
 
+import jpg.k.simplyimprovedterrain.math.DistributionUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
@@ -10,6 +10,10 @@ import net.minecraft.world.level.levelgen.feature.configurations.RandomPatchConf
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 
+/**
+ * Replaces pseudo-normal distribution with ellipsoidal.
+ * Visual impact: ★★★☆☆
+ */
 @Mixin(RandomPatchFeature.class)
 public class MixinRandomPatchFeature {
 
@@ -20,33 +24,23 @@ public class MixinRandomPatchFeature {
     @Overwrite
     public boolean place(FeaturePlaceContext<RandomPatchConfiguration> featurePlaceContext) {
         RandomPatchConfiguration randomPatchConfiguration = featurePlaceContext.config();
-        RandomSource randomSource = featurePlaceContext.random();
+        RandomSource random = featurePlaceContext.random();
         BlockPos origin = featurePlaceContext.origin();
         WorldGenLevel worldGenLevel = featurePlaceContext.level();
 
-        int xzSpread = randomPatchConfiguration.xzSpread() + 1;
-        int ySpread = randomPatchConfiguration.ySpread() + 1;
+        float xzSpread = (randomPatchConfiguration.xzSpread() + 1) * DistributionUtils.RADIUS_RATIO_SPHERE_TO_CUBE;
+        float ySpread = (randomPatchConfiguration.ySpread() + 1) * DistributionUtils.RADIUS_RATIO_SPHERE_TO_CUBE;
 
         int placementCount = 0;
         BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
         for (int i = 0; i < randomPatchConfiguration.tries(); ++i) {
 
             // Isotropic placement
-            float sphereY = randomSource.nextFloat() * 2.0f - 1.0f;
-            float sphereTheta = randomSource.nextFloat() * Mth.TWO_PI;
-            float sphereXZScale = Mth.sqrt(1.0f - sphereY * sphereY);
+            DistributionUtils.sampleEllipsoidCenterBiasedSpread(xzSpread, ySpread, random, (dx, dy, dz) -> mutableBlockPos.setWithOffset(
+                    origin, Math.round(dx), Math.round(dy), Math.round(dz)
+            ));
 
-            // Same distribution as `sqrt(rand)`. Biases towards center; use a cube root for a true uniform spherical distribution.
-            float radiusScale = 1.0f - Math.abs(randomSource.nextFloat() - randomSource.nextFloat());
-
-            mutableBlockPos.setWithOffset(
-                    origin,
-                    Math.round(radiusScale * sphereXZScale * xzSpread * Mth.cos(sphereTheta)),
-                    Math.round(radiusScale * sphereY * ySpread),
-                    Math.round(radiusScale * sphereXZScale * xzSpread * Mth.sin(sphereTheta))
-            );
-
-            if ((randomPatchConfiguration.feature().value()).place(worldGenLevel, featurePlaceContext.chunkGenerator(), randomSource, mutableBlockPos)) {
+            if ((randomPatchConfiguration.feature().value()).place(worldGenLevel, featurePlaceContext.chunkGenerator(), random, mutableBlockPos)) {
                 ++placementCount;
             }
         }

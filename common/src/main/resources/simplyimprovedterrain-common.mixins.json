@@ -7,21 +7,32 @@
   ],
   "mixins": [
     "FixinMulOrAdd",
+    "MixinBambooFeature",
     "MixinBasaltPillarFeature",
     "MixinBiomeManager",
     "MixinBlendedNoise",
+    "MixinBlockBlobFeature",
+    "MixinBlueIceFeature",
     "MixinClimateSampler",
     "MixinDiskFeature",
+    "MixinDripstoneClusterFeature",
     "MixinEndIslandDensityFunction",
+    "MixinEndIslandFeature",
     "MixinLakeFeature",
     "MixinMultiNoiseBiomeSource",
+    "MixinNetherForestVegetationFeature",
     "MixinPerlinFractalNoise",
     "MixinRandomPatchFeature",
     "MixinRandomState",
+    "MixinReplaceBlobsFeature",
+    "MixinRootSystemFeature",
     "MixinRuinedPortalPiece",
+    "MixinSeagrassFeature",
+    "MixinSeaPickleFeature",
     "MixinShelfEnabledNoise",
     "MixinSimplexNoise",
-    "MixinTheEndBiomeSource"
+    "MixinTheEndBiomeSource",
+    "MixinWeepingVinesFeature"
   ],
   "injectors": {
     "defaultRequire": 1

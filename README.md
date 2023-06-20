@@ -1,6 +1,6 @@
 # Simply Improved Terrain
 
-Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on increasing directional variety, grid independence, and overall feature variation. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks.
+Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on increasing directional variety, grid independence, and overall shape variation. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks.
 
 ### Changes:
 
@@ -11,6 +11,5 @@ Simply Improved Terrain rewrites some of the terrain generation components in Mi
 - Reduces 45-degree artifacts in ice and surface patterns by expanding the underlying gradient vector table.
 - Cleans up interval-lock from biome border surface patterns by correcting the sample loop range, switching to aggregated weight falloff, and bypassing subsampling.
 - Removes grid effects from the End island generator, and smoothes intersection transitions, by switching to full-resolution metaballs.
-- Breaks up monotony in circular sand/gravel/clay/ice deposits by adding falloff noise.
-- Rounds out shape distributions of lava lake features by switching to isotropic ellipsoid placement formulas. Also adds subtle variation to barriers.
-- Removes cardinal direction bias from ruined portal, basalt column, and random patch spreads by moving to Euclidean distance metrics.
+- Rounds out shape distributions of placed terrain features, including lava lakes and basalt blobs, by switching to isotropic spread formulas.
+- Breaks up monotony in surface deposit and small End island features by adding falloff noise.

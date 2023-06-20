@@ -13,6 +13,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
+/**
+ * Replaces the clamped hyperbolic falloff with Euclidean falloff.
+ * Visual impact: ★★★☆☆
+ */
 @Mixin(BasaltPillarFeature.class)
 public abstract class MixinBasaltPillarFeature {
 
@@ -30,7 +34,7 @@ public abstract class MixinBasaltPillarFeature {
     public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> featurePlaceContext) {
         BlockPos blockPos = featurePlaceContext.origin();
         WorldGenLevel worldGenLevel = featurePlaceContext.level();
-        RandomSource randomSource = featurePlaceContext.random();
+        RandomSource random = featurePlaceContext.random();
 
         if (worldGenLevel.isEmptyBlock(blockPos) && !worldGenLevel.isEmptyBlock(blockPos.above())) {
             BlockPos.MutableBlockPos columnBlockPos = blockPos.mutable();
@@ -42,29 +46,29 @@ public abstract class MixinBasaltPillarFeature {
                 }
 
                 worldGenLevel.setBlock(columnBlockPos, Blocks.BASALT.defaultBlockState(), 2);
-                placeHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.NORTH));
-                placeHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.SOUTH));
-                placeHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.WEST));
-                placeHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.EAST));
+                placeHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.NORTH));
+                placeHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.SOUTH));
+                placeHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.WEST));
+                placeHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.EAST));
                 columnBlockPos.move(Direction.DOWN);
             }
 
             columnBlockPos.move(Direction.UP);
-            placeBaseHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.NORTH));
-            placeBaseHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.SOUTH));
-            placeBaseHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.WEST));
-            placeBaseHangOff(worldGenLevel, randomSource, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.EAST));
+            placeBaseHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.NORTH));
+            placeBaseHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.SOUTH));
+            placeBaseHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.WEST));
+            placeBaseHangOff(worldGenLevel, random, hangOffBlockPos.setWithOffset(columnBlockPos, Direction.EAST));
             columnBlockPos.move(Direction.DOWN);
             BlockPos.MutableBlockPos spreadBlockPos = new BlockPos.MutableBlockPos();
 
-            for (int z = -SPREAD_RADIUS; z <= SPREAD_RADIUS; ++z) {
-                for (int x = -SPREAD_RADIUS; x <= SPREAD_RADIUS; ++x) {
+            for (int dz = -SPREAD_RADIUS; dz <= SPREAD_RADIUS; ++dz) {
+                for (int dx = -SPREAD_RADIUS; dx <= SPREAD_RADIUS; ++dx) {
 
                     // Euclidean randomness threshold and loop mask
-                    int distanceSquared = x * x + z * z;
+                    int distanceSquared = dx * dx + dz * dz;
                     if (distanceSquared >= SPREAD_RADIUS_SQUARED_ISH) continue;
 
-                    spreadBlockPos.set(columnBlockPos.offset(x, 0, z));
+                    spreadBlockPos.set(columnBlockPos.offset(dx, 0, dz));
 
                     boolean shouldPlace = distanceSquared <= GUARANTEED_SPREAD_RADIUS_SQUARED;
                     if (!shouldPlace) {
@@ -76,7 +80,7 @@ public abstract class MixinBasaltPillarFeature {
                         distanceTransformed = distanceTransformed * distanceTransformed * distanceTransformed;
 
                         // Sample within the range of the above.
-                        int sample = randomSource.nextInt((SPREAD_RADIUS_SQUARED_ISH - GUARANTEED_SPREAD_RADIUS_SQUARED) *
+                        int sample = random.nextInt((SPREAD_RADIUS_SQUARED_ISH - GUARANTEED_SPREAD_RADIUS_SQUARED) *
                                 (SPREAD_RADIUS_SQUARED_ISH - GUARANTEED_SPREAD_RADIUS_SQUARED) *
                                 (SPREAD_RADIUS_SQUARED_ISH - GUARANTEED_SPREAD_RADIUS_SQUARED)
                         );
@@ -102,15 +106,15 @@ public abstract class MixinBasaltPillarFeature {
             }
 
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     @Shadow
-    protected abstract void placeBaseHangOff(LevelAccessor levelAccessor, RandomSource randomSource, BlockPos blockPos);
+    protected abstract void placeBaseHangOff(LevelAccessor levelAccessor, RandomSource random, BlockPos blockPos);
 
     @Shadow
-    protected abstract boolean placeHangOff(LevelAccessor levelAccessor, RandomSource randomSource, BlockPos blockPos);
+    protected abstract boolean placeHangOff(LevelAccessor levelAccessor, RandomSource random, BlockPos blockPos);
 
 }

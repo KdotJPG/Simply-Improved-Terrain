@@ -2,6 +2,7 @@ package jpg.k.simplyimprovedterrain.mixin;
 
 import com.mojang.serialization.Codec;
 import jpg.k.simplyimprovedterrain.math.ExtraMath;
+import jpg.k.simplyimprovedterrain.math.RotatedEllipse;
 import jpg.k.simplyimprovedterrain.terrain.OpenSimplex2S;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
@@ -19,21 +20,25 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
+/**
+ * Replaces square placement range with circular, adds rotation to ellipsoids, and adds noise variation to borders.
+ * Visual impact: ★★★★☆
+ */
 @SuppressWarnings("deprecation")
 @Mixin(LakeFeature.class)
 public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration> {
 
     private static final BlockState AIR = Blocks.CAVE_AIR.defaultBlockState();
 
-    private static final double FILLABLE_RADIUS = 9.7;
-    private static final double LIQUID_DEPTH = 4.25;
-    private static final double SURFACE_CAVITY_DEPTH = 4.25;
+    private static final float FILLABLE_RADIUS = 9.7f;
+    private static final float LIQUID_DEPTH = 4.25f;
+    private static final float SURFACE_CAVITY_DEPTH = 4.25f;
 
     // These supplement the guaranteed barrier.
-    private static final double NOISY_BARRIER_THICKNESS_XZ_MAX = 1.3;
-    private static final double NOISY_BARRIER_THICKNESS_XZ_MIN = 0.65;
-    private static final double NOISY_BARRIER_THICKNESS_Y_MAX = 1.5;
-    private static final double NOISY_BARRIER_THICKNESS_Y_MIN = 0.75;
+    private static final float NOISY_BARRIER_THICKNESS_XZ_MAX = 1.3f;
+    private static final float NOISY_BARRIER_THICKNESS_XZ_MIN = 0.65f;
+    private static final float NOISY_BARRIER_THICKNESS_Y_MAX = 1.5f;
+    private static final float NOISY_BARRIER_THICKNESS_Y_MIN = 0.75f;
 
     private static final double LIQUID_DEPTH_PADDED = LIQUID_DEPTH + NOISY_BARRIER_THICKNESS_Y_MAX;
     private static final double SURFACE_CAVITY_DEPTH_PADDED = SURFACE_CAVITY_DEPTH + NOISY_BARRIER_THICKNESS_Y_MAX;
@@ -47,10 +52,10 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
     private static final int MIN_ELLIPSOID_COUNT = 5;
     private static final int MAX_ELLIPSOID_COUNT = 10;
 
-    private static final double ELLIPSE_SIZE_XZ_MIN = 3.5;
-    private static final double ELLIPSE_SIZE_XZ_MAX = 11.5;
-    private static final double ELLIPSE_SIZE_Y_MIN = 2.5;
-    private static final double ELLIPSE_SIZE_Y_MAX = 7.5;
+    private static final float ELLIPSE_RADIUS_XZ_MIN = 1.75f;
+    private static final float ELLIPSE_RADIUS_XZ_MAX = 5.75f;
+    private static final float ELLIPSE_RADIUS_Y_MIN = 1.25f;
+    private static final float ELLIPSE_RADIUS_Y_MAX = 3.75f;
 
     private static final double BARRIER_THICKNESS_NOISE_FREQUENCY_XZ = 0.1375;
     private static final double BARRIER_THICKNESS_NOISE_FREQUENCY_Y = 0.1375;
@@ -60,7 +65,7 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
     private static final double BARRIER_PERFORATION_NOISE_FREQUENCY_Y = 0.275;
     private static final long BARRIER_PERFORATION_NOISE_SEED_BIT_FLIP = -0x23520947DBB98316L;
 
-    // Can't put an enum in a mixin class. Preferring self-contained code over descriptive typing.
+    // Can't put an enum in a mixin class, so opting for self-contained code over descriptive typing.
     private static final int STATE_NONE = 0;
     private static final int STATE_BARRIER = 1;
     private static final int STATE_FLUID_OR_AIR = 2;
@@ -93,62 +98,54 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
             for (int i = 0; i < ellipsoidCount; ++i) {
 
                 // Ellipsoid scale factors
-                double ellipseAngle = random.nextDouble() * Mth.TWO_PI;
-                double radiusYFluid = random.nextDouble() * (ELLIPSE_SIZE_Y_MAX - ELLIPSE_SIZE_Y_MIN) / 2 + (ELLIPSE_SIZE_Y_MIN / 2);
-                double radiusUFluid = random.nextDouble() * (ELLIPSE_SIZE_XZ_MAX - ELLIPSE_SIZE_XZ_MIN) / 2 + (ELLIPSE_SIZE_XZ_MIN / 2);
-                double radiusVFluid = random.nextDouble() * (ELLIPSE_SIZE_XZ_MAX - ELLIPSE_SIZE_XZ_MIN) / 2 + (ELLIPSE_SIZE_XZ_MIN / 2);
-                double radiusYBarrierMin = radiusYFluid + NOISY_BARRIER_THICKNESS_Y_MIN;
-                double radiusUBarrierMin = radiusUFluid + NOISY_BARRIER_THICKNESS_XZ_MIN;
-                double radiusVBarrierMin = radiusVFluid + NOISY_BARRIER_THICKNESS_XZ_MIN;
-                double radiusYBarrierMax = radiusYFluid + NOISY_BARRIER_THICKNESS_Y_MAX;
-                double radiusUBarrierMax = radiusUFluid + NOISY_BARRIER_THICKNESS_XZ_MAX;
-                double radiusVBarrierMax = radiusVFluid + NOISY_BARRIER_THICKNESS_XZ_MAX;
+                float ellipseAngle = random.nextFloat() * Mth.TWO_PI;
 
-                // Ellipsoid rotation vectors
-                double ellipseSin = Math.sin(ellipseAngle), ellipseCos = Math.cos(ellipseAngle);
-                double uxFluid = ellipseSin / radiusUFluid, uzFluid =  ellipseCos / radiusUFluid;
-                double vxFluid = ellipseCos / radiusVFluid, vzFluid = -ellipseSin / radiusVFluid;
-                double uxBarrierMin = ellipseSin / radiusUBarrierMin, uzBarrierMin =  ellipseCos / radiusUBarrierMin;
-                double vxBarrierMin = ellipseCos / radiusVBarrierMin, vzBarrierMin = -ellipseSin / radiusVBarrierMin;
-                double uxBarrierMax = ellipseSin / radiusUBarrierMax, uzBarrierMax =  ellipseCos / radiusUBarrierMax;
-                double vxBarrierMax = ellipseCos / radiusVBarrierMax, vzBarrierMax = -ellipseSin / radiusVBarrierMax;
+                float radiusYFluid = Mth.randomBetween(random, ELLIPSE_RADIUS_Y_MIN,  ELLIPSE_RADIUS_Y_MAX);
+                float radiusUFluid = Mth.randomBetween(random, ELLIPSE_RADIUS_XZ_MIN, ELLIPSE_RADIUS_XZ_MAX);
+                float radiusVFluid = Mth.randomBetween(random, ELLIPSE_RADIUS_XZ_MIN, ELLIPSE_RADIUS_XZ_MAX);
+                float radiusYBarrierMin = radiusYFluid + NOISY_BARRIER_THICKNESS_Y_MIN;
+                float radiusUBarrierMin = radiusUFluid + NOISY_BARRIER_THICKNESS_XZ_MIN;
+                float radiusVBarrierMin = radiusVFluid + NOISY_BARRIER_THICKNESS_XZ_MIN;
+                float radiusYBarrierMax = radiusYFluid + NOISY_BARRIER_THICKNESS_Y_MAX;
+                float radiusUBarrierMax = radiusUFluid + NOISY_BARRIER_THICKNESS_XZ_MAX;
+                float radiusVBarrierMax = radiusVFluid + NOISY_BARRIER_THICKNESS_XZ_MAX;
+
+                // Ellipsoid 2D ellipse components
+                float ellipseCos = Mth.cos(ellipseAngle), ellipseSin = Mth.sin(ellipseAngle);
+                RotatedEllipse ellipseFluid = RotatedEllipse.createFromUnitVectorAndRadii(ellipseCos, ellipseSin, radiusUFluid, radiusVFluid);
+                RotatedEllipse ellipseBarrierMin = RotatedEllipse.createFromUnitVectorAndRadii(ellipseCos, ellipseSin, radiusUBarrierMin, radiusVBarrierMin);
+                RotatedEllipse ellipseBarrierMax = RotatedEllipse.createFromUnitVectorAndRadii(ellipseCos, ellipseSin, radiusUBarrierMax, radiusVBarrierMax);
 
                 // Vertical scales
-                double yScaleFluid = 1.0 / radiusYFluid;
-                double yScaleBarrierMin = 1.0 / radiusYBarrierMin;
-                double yScaleBarrierMax = 1.0 / radiusYBarrierMax;
+                float yScaleFluid = 1.0f / radiusYFluid;
+                float yScaleBarrierMin = 1.0f / radiusYBarrierMin;
+                float yScaleBarrierMax = 1.0f / radiusYBarrierMax;
 
                 // Ellipsoid placement within boundary circle,
                 // accounting for its shape and orientation.
-                double startAngle = random.nextDouble() * Mth.TWO_PI;
-                double startUVScale = 1.0 - Math.abs(random.nextDouble() - random.nextDouble());
-                double startU = startUVScale * (FILLABLE_RADIUS - radiusUFluid) * Math.sin(startAngle);
-                double startV = startUVScale * (FILLABLE_RADIUS - radiusVFluid) * Math.cos(startAngle);
-                double startX = ellipseSin * startU + ellipseCos * startV;
-                double startZ = ellipseCos * startU - ellipseCos * startV;
+                float startAngle = random.nextFloat() * Mth.TWO_PI;
+                float startUVScale = 1.0f - Math.abs(random.nextFloat() - random.nextFloat());
+                float startU = startUVScale * (FILLABLE_RADIUS - radiusUFluid) * Mth.cos(startAngle);
+                float startV = startUVScale * (FILLABLE_RADIUS - radiusVFluid) * Mth.sin(startAngle);
+                float startX = ellipseCos * startU + ellipseSin * startV;
+                float startZ = ellipseSin * startU - ellipseSin * startV;
 
                 // Ellipsoid vertical placement
-                double minStartY = -LIQUID_DEPTH + radiusYFluid;
-                double maxStartY = SURFACE_CAVITY_DEPTH - radiusYFluid;
-                double startY = random.nextDouble() * (maxStartY - minStartY) + minStartY;
+                float minStartY = -LIQUID_DEPTH + radiusYFluid;
+                float maxStartY = SURFACE_CAVITY_DEPTH - radiusYFluid;
+                float startY = Mth.randomBetween(random, minStartY, maxStartY);
 
-                for (int z = -PLACEABLE_RADIUS; z <= PLACEABLE_RADIUS; ++z) {
-                    for (int x = -PLACEABLE_RADIUS; x <= PLACEABLE_RADIUS; ++x) {
-                        for (int y = -REQUIRED_CLEARANCE_BELOW; y <= REQUIRED_CLEARANCE_ABOVE; ++y) {
-                            int index = index(x, y, z);
+                for (int dz = -PLACEABLE_RADIUS; dz <= PLACEABLE_RADIUS; ++dz) {
+                    for (int dx = -PLACEABLE_RADIUS; dx <= PLACEABLE_RADIUS; ++dx) {
+                        for (int dy = -REQUIRED_CLEARANCE_BELOW; dy <= REQUIRED_CLEARANCE_ABOVE; ++dy) {
+                            int index = index(dx, dy, dz);
                             int currentState = states[index];
 
                             if (currentState == STATE_FLUID_OR_AIR) continue;
 
                             // Fluid (or air) ellipsoid
-                            double rFluid;
-                            {
-                                double duInner = uxFluid * (x - startX) + uzFluid * (z - startZ);
-                                double dvInner = vxFluid * (x - startX) + vzFluid * (z - startZ);
-                                double dyInner = (y - startY) * yScaleFluid;
-                                rFluid = dyInner * dyInner + duInner * duInner + dvInner * dvInner;
-                            }
-                            if (rFluid < 1) {
+                            float fluidEllipsoidValue = ellipseFluid.compute(dx - startX, dz - startZ) + Mth.square((dy - startY) * yScaleFluid);
+                            if (fluidEllipsoidValue < 1) {
                                 states[index] = STATE_FLUID_OR_AIR;
                                 continue;
                             }
@@ -156,33 +153,21 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
                             if (currentState != STATE_NONE) continue;
 
                             // Barrier ellipsoid guaranteed to place
-                            double rBarrierMin;
-                            {
-                                double duBarrierMin = uxBarrierMin * (x - startX) + uzBarrierMin * (z - startZ);
-                                double dvBarrierMin = vxBarrierMin * (x - startX) + vzBarrierMin * (z - startZ);
-                                double dyBarrierMin = (y - startY) * yScaleBarrierMin;
-                                rBarrierMin = dyBarrierMin * dyBarrierMin + duBarrierMin * duBarrierMin + dvBarrierMin * dvBarrierMin;
-                            }
-                            if (rBarrierMin < 1) {
+                            float barrierMinEllipsoidValue = ellipseBarrierMin.compute(dx - startX, dz - startZ) + Mth.square((dy - startY) * yScaleBarrierMin);
+                            if (barrierMinEllipsoidValue < 1) {
                                 states[index] = STATE_BARRIER;
                                 continue;
                             }
                             
                             // Barrier ellipsoid that can place depending on noise
-                            double rBarrierMax;
-                            {
-                                double duBarrierMax = uxBarrierMax * (x - startX) + uzBarrierMax * (z - startZ);
-                                double dvBarrierMax = vxBarrierMax * (x - startX) + vzBarrierMax * (z - startZ);
-                                double dyBarrierMax = (y - startY) * yScaleBarrierMax;
-                                rBarrierMax = dyBarrierMax * dyBarrierMax + duBarrierMax * duBarrierMax + dvBarrierMax * dvBarrierMax;
-                            }
-                            double barrierThicknessNoiseValue = sampleBarrierThicknessNoise(
+                            float barrierMaxEllipsoidValue = ellipseBarrierMax.compute(dx - startX, dz - startZ) + Mth.square((dy - startY) * yScaleBarrierMax);
+                            float barrierThicknessNoiseValue = sampleBarrierThicknessNoise(
                                     barrierThicknessNoiseSeed,
-                                    x + origin.getX(),
-                                    y + origin.getY(),
-                                    z + origin.getZ()
+                                    dx + origin.getX(),
+                                    dy + origin.getY(),
+                                    dz + origin.getZ()
                             );
-                            if (Mth.lerp(barrierThicknessNoiseValue, rBarrierMin, rBarrierMax) < 1) {
+                            if (Mth.lerp(barrierThicknessNoiseValue, barrierMinEllipsoidValue, barrierMaxEllipsoidValue) < 1) {
                                 states[index] = STATE_BARRIER;
                             }
 
@@ -194,38 +179,38 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
             BlockState fluidBlockState = configuration.fluid().getState(random, origin);
 
             // Abort conditions for the barrier...
-            for (int z = -PLACEABLE_RADIUS; z <= PLACEABLE_RADIUS; ++z) {
-                for (int x = -PLACEABLE_RADIUS; x <= PLACEABLE_RADIUS; ++x) {
-                    for (int y = -REQUIRED_CLEARANCE_BELOW; y <= REQUIRED_CLEARANCE_ABOVE; ++y) {
-                        int index = index(x, y, z);
-                        int state = states[index(x, y, z)];
+            for (int dz = -PLACEABLE_RADIUS; dz <= PLACEABLE_RADIUS; ++dz) {
+                for (int dx = -PLACEABLE_RADIUS; dx <= PLACEABLE_RADIUS; ++dx) {
+                    for (int dy = -REQUIRED_CLEARANCE_BELOW; dy <= REQUIRED_CLEARANCE_ABOVE; ++dy) {
+                        int index = index(dx, dy, dz);
+                        int state = states[index];
 
                         // Still need to force barriers directly around/below fluid.
                         // The smallest placement-guaranteeing values for the minimum barrier constants, 1.0,
                         // make them too thick on average. By re-adding this, we can safely use nicer-looking constants.
-                        if (state == STATE_NONE && y < 0) {
+                        if (state == STATE_NONE && dy < 0) {
                             if (
-                                    states[index(x, y + 1, z)] == STATE_FLUID_OR_AIR ||
-                                    (x > -PLACEABLE_RADIUS && states[index(x - 1, y, z)] == STATE_FLUID_OR_AIR) ||
-                                    (x <  PLACEABLE_RADIUS && states[index(x + 1, y, z)] == STATE_FLUID_OR_AIR) ||
-                                    (z > -PLACEABLE_RADIUS && states[index(x, y, z - 1)] == STATE_FLUID_OR_AIR) ||
-                                    (z <  PLACEABLE_RADIUS && states[index(x, y, z + 1)] == STATE_FLUID_OR_AIR)
+                                    states[index(dx, dy + 1, dz)] == STATE_FLUID_OR_AIR ||
+                                    (dx > -PLACEABLE_RADIUS && states[index(dx - 1, dy, dz)] == STATE_FLUID_OR_AIR) ||
+                                    (dx <  PLACEABLE_RADIUS && states[index(dx + 1, dy, dz)] == STATE_FLUID_OR_AIR) ||
+                                    (dz > -PLACEABLE_RADIUS && states[index(dx, dy, dz - 1)] == STATE_FLUID_OR_AIR) ||
+                                    (dz <  PLACEABLE_RADIUS && states[index(dx, dy, dz + 1)] == STATE_FLUID_OR_AIR)
                             ) {
-                                state = states[index(x, y, z)] = STATE_BARRIER;
+                                state = states[index] = STATE_BARRIER;
                             }
                         }
 
                         if (state == STATE_BARRIER) {
-                            BlockPos blockPosHere = origin.offset(x, y, z);
+                            BlockPos blockPosHere = origin.offset(dx, dy, dz);
                             Material material = worldGenLevel.getBlockState(blockPosHere).getMaterial();
 
                             // Abort if we encounter fluid above the surface...
-                            if (y >= 0 && material.isLiquid()) {
+                            if (dy >= 0 && material.isLiquid()) {
                                 return false;
                             }
 
                             // ... or any non-solidity + unmatching fluidity below it.
-                            if (y < 0 && !material.isSolid() && worldGenLevel.getBlockState(blockPosHere) != fluidBlockState) {
+                            if (dy < 0 && !material.isSolid() && worldGenLevel.getBlockState(blockPosHere) != fluidBlockState) {
                                 return false;
                             }
                         }
@@ -234,13 +219,13 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
             }
 
             // Place fluid/air
-            for (int z = -PLACEABLE_RADIUS; z <= PLACEABLE_RADIUS; ++z) {
-                for (int x = -PLACEABLE_RADIUS; x <= PLACEABLE_RADIUS; ++x) {
-                    for (int y = -REQUIRED_CLEARANCE_BELOW; y <= REQUIRED_CLEARANCE_ABOVE; ++y) {
-                        if (states[index(x, y, z)] == STATE_FLUID_OR_AIR) {
-                            BlockPos blockPosHere = origin.offset(x, y, z);
+            for (int dz = -PLACEABLE_RADIUS; dz <= PLACEABLE_RADIUS; ++dz) {
+                for (int dx = -PLACEABLE_RADIUS; dx <= PLACEABLE_RADIUS; ++dx) {
+                    for (int dy = -REQUIRED_CLEARANCE_BELOW; dy <= REQUIRED_CLEARANCE_ABOVE; ++dy) {
+                        if (states[index(dx, dy, dz)] == STATE_FLUID_OR_AIR) {
+                            BlockPos blockPosHere = origin.offset(dx, dy, dz);
                             if (this.canReplaceBlock(worldGenLevel.getBlockState(blockPosHere))) {
-                                boolean isAboveSurface = (y >= 0);
+                                boolean isAboveSurface = (dy >= 0);
                                 worldGenLevel.setBlock(blockPosHere, isAboveSurface ? AIR : fluidBlockState, 2);
                                 if (isAboveSurface) {
                                     worldGenLevel.scheduleTick(blockPosHere, AIR.getBlock(), 0);
@@ -256,15 +241,15 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
 
             // Place barrier
             if (!barrierBlockState.isAir()) {
-                for (int z = -PLACEABLE_RADIUS; z <= PLACEABLE_RADIUS; ++z) {
-                    for (int x = -PLACEABLE_RADIUS; x <= PLACEABLE_RADIUS; ++x) {
-                        for (int y = -REQUIRED_CLEARANCE_BELOW; y <= REQUIRED_CLEARANCE_ABOVE; ++y) {
-                            if (states[index(x, y, z)] != STATE_BARRIER) continue;
+                for (int dz = -PLACEABLE_RADIUS; dz <= PLACEABLE_RADIUS; ++dz) {
+                    for (int dx = -PLACEABLE_RADIUS; dx <= PLACEABLE_RADIUS; ++dx) {
+                        for (int dy = -REQUIRED_CLEARANCE_BELOW; dy <= REQUIRED_CLEARANCE_ABOVE; ++dy) {
+                            if (states[index(dx, dy, dz)] != STATE_BARRIER) continue;
 
                             // Always place the barrier below the surface.
-                            boolean shouldPlaceBarrier = (y < 0);
+                            boolean shouldPlaceBarrier = (dy < 0);
 
-                            BlockPos blockPosHere = origin.offset(x, y, z);
+                            BlockPos blockPosHere = origin.offset(dx, dy, dz);
 
                             // Above the surface, place the barrier sometimes, based on a noise map.
                             if (!shouldPlaceBarrier) {
@@ -278,7 +263,7 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
                                 // Place it less often as we go up.
                                 // Offset by 1 to avoid guaranteeing that the first layer above the surface always places the barrier.
                                 // Square the noise value to make the gaps bigger faster.
-                                double barrierNoiseThreshold = (y + 1) * (1.0 / (SURFACE_CAVITY_DEPTH_PADDED + 1));
+                                double barrierNoiseThreshold = (dy + 1) * (1.0 / (SURFACE_CAVITY_DEPTH_PADDED + 1));
                                 barrierPerforationNoiseValue *= barrierPerforationNoiseValue;
                                 shouldPlaceBarrier = (barrierPerforationNoiseValue > barrierNoiseThreshold);
                             }
@@ -297,9 +282,9 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
 
             // Surface water -> ice in frozen biomes
             if (fluidBlockState.getFluidState().is(FluidTags.WATER)) {
-                for (int z = -PLACEABLE_RADIUS; z <= PLACEABLE_RADIUS; ++z) {
-                    for (int x = -PLACEABLE_RADIUS; x <= PLACEABLE_RADIUS; ++x) {
-                        BlockPos blockPosHere = origin.offset(x, -1, z);
+                for (int dz = -PLACEABLE_RADIUS; dz <= PLACEABLE_RADIUS; ++dz) {
+                    for (int dx = -PLACEABLE_RADIUS; dx <= PLACEABLE_RADIUS; ++dx) {
+                        BlockPos blockPosHere = origin.offset(dx, -1, dz);
                         if ((worldGenLevel.getBiome(blockPosHere).value()).shouldFreeze(worldGenLevel, blockPosHere, false) &&
                                 this.canReplaceBlock(worldGenLevel.getBlockState(blockPosHere))) {
                             worldGenLevel.setBlock(blockPosHere, Blocks.ICE.defaultBlockState(), 2);
@@ -312,8 +297,8 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
         }
     }
 
-    private double sampleBarrierThicknessNoise(long noiseSeed, double x, double y, double z) {
-        double value = OpenSimplex2S.noise3_ImproveXZ(
+    private float sampleBarrierThicknessNoise(long noiseSeed, double x, double y, double z) {
+        float value = OpenSimplex2S.noise3_ImproveXZ(
                 noiseSeed,
                x * BARRIER_THICKNESS_NOISE_FREQUENCY_XZ,
                 y * BARRIER_THICKNESS_NOISE_FREQUENCY_Y,
@@ -324,8 +309,8 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
         return ExtraMath.clampedFadeWithSymmetricDomainAndUnitRange(value);
     }
 
-    private double sampleBarrierPerforationNoise(long noiseSeed, double x, double y, double z) {
-        double value = OpenSimplex2S.noise3_ImproveXZ(
+    private float sampleBarrierPerforationNoise(long noiseSeed, double x, double y, double z) {
+        float value = OpenSimplex2S.noise3_ImproveXZ(
                 noiseSeed,
                 x * BARRIER_PERFORATION_NOISE_FREQUENCY_XZ,
                 y * BARRIER_PERFORATION_NOISE_FREQUENCY_Y,

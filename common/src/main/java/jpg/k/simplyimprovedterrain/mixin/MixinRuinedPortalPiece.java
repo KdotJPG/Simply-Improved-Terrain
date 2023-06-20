@@ -1,22 +1,37 @@
 package jpg.k.simplyimprovedterrain.mixin;
 
-import java.util.Random;
-
+import it.unimi.dsi.fastutil.floats.Float2FloatFunction;
+import jpg.k.simplyimprovedterrain.math.LinearFunction1f;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceType;
 import net.minecraft.world.level.levelgen.structure.structures.RuinedPortalPiece;
 import net.minecraft.world.level.levelgen.structure.StructurePiece;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Replaces Manhattan falloff with Euclidean.
+ * Visual impact: ★★★★★
+ */
 @Mixin(RuinedPortalPiece.class)
-public class MixinRuinedPortalPiece {
+public abstract class MixinRuinedPortalPiece extends StructurePiece {
+
+    // Continuous replacement for vanilla's discrete falloff threshold values.
+    // Original values: { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.9f, 0.9f, 0.8f, 0.7f, 0.6f, 0.4f, 0.2f }
+    // https://www.desmos.com/calculator/dwo584epfj
+    private static final float THRESHOLD_DROP_START = 6.0f;
+    private static final float THRESHOLD_REACH_ZERO_AT = 14.0f;
+    private static final LinearFunction1f THRESHOLD_SLIDE = LinearFunction1f.createAsMap(THRESHOLD_DROP_START, THRESHOLD_REACH_ZERO_AT, 0.0f, 1.0f);
+    private static final Float2FloatFunction THRESHOLD_FUNCTION = (t) -> {
+        if (t <= THRESHOLD_DROP_START) return 1.0f;
+        return 1.0f - Mth.square(THRESHOLD_SLIDE.compute(t));
+    };
 
     @Shadow
     private @Final RuinedPortalPiece.VerticalPlacement verticalPlacement;
@@ -24,50 +39,43 @@ public class MixinRuinedPortalPiece {
     @Shadow
     private @Final RuinedPortalPiece.Properties properties;
 
-    @Inject(method = "spreadNetherrack", at = @At("HEAD"), cancellable = true)
-    public void injectSpreadNetherrack(RandomSource random, LevelAccessor levelAccessor, CallbackInfo ci) {
-        BoundingBox boundingBox = ((StructurePiece)(Object)this).getBoundingBox();
+    protected MixinRuinedPortalPiece(StructurePieceType structurePieceType, int genDepth, BoundingBox boundingBox) {
+        super(structurePieceType, genDepth, boundingBox);
+    }
 
-        boolean flag = this.verticalPlacement == RuinedPortalPiece.VerticalPlacement.ON_LAND_SURFACE || this.verticalPlacement == RuinedPortalPiece.VerticalPlacement.ON_OCEAN_FLOOR;
-        BlockPos center = boundingBox.getCenter();
-        int cx = center.getX();
-        int cz = center.getZ();
-        float[] falloffThresholds = new float[] {1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 0.9F, 0.9F, 0.8F, 0.7F, 0.6F, 0.4F, 0.2F};
-        int nFalloffThresholds = falloffThresholds.length;
-        int averageWidth = (boundingBox.getXSpan() + boundingBox.getZSpan()) / 2;
-        int falloffIndexOffset = random.nextInt(Math.max(1, 8 - averageWidth / 2));
+    /**
+     * @author K.jpg
+     * @reason Let organic patterns be isotropic!
+     */
+    @Overwrite
+    private void spreadNetherrack(RandomSource random, LevelAccessor levelAccessor) {
+        BoundingBox boundingBox = this.getBoundingBox();
+
+        boolean isOnSurface = this.verticalPlacement == RuinedPortalPiece.VerticalPlacement.ON_LAND_SURFACE ||
+                this.verticalPlacement == RuinedPortalPiece.VerticalPlacement.ON_OCEAN_FLOOR;
+        BlockPos origin = boundingBox.getCenter();
+        float halfAverageWidth = (boundingBox.getXSpan() + boundingBox.getZSpan()) / 4.0f;
+        float radiusReduction = random.nextFloat() * halfAverageWidth;
+        float radius = THRESHOLD_REACH_ZERO_AT - radiusReduction;
+        int radiusLoopBound = (int)radius;
 
         BlockPos.MutableBlockPos currentBlockPos = BlockPos.ZERO.mutable();
-        int nFalloffThresholdsSq = nFalloffThresholds * nFalloffThresholds;
-        float invNFalloffThresholdsSq = 1.0f / nFalloffThresholdsSq;
 
-        for(int x = cx - nFalloffThresholds; x <= cx + nFalloffThresholds; ++x) {
-            for(int z = cz - nFalloffThresholds; z <= cz + nFalloffThresholds; ++z) {
+        for (int dz = -radiusLoopBound; dz <= radiusLoopBound; ++dz) {
+            for (int dx = -radiusLoopBound; dx <= radiusLoopBound; ++dx) {
+                float distanceSquared = dx * dx + dz * dz;
+                if (radius >= radius * radius) continue;
 
-                // Euclidean Distance Squared
-                float euclideanFalloff = (x - cx) * (x - cx) + (z - cz) * (z - cz);
+                float distance = Mth.sqrt(distanceSquared);
+                float threshold = THRESHOLD_FUNCTION.get(distance + radiusReduction);
 
-                // Re-use existing falloff threshold array by converting this value.
-                int falloffIndex;
-                if (euclideanFalloff > nFalloffThresholdsSq) falloffIndex = nFalloffThresholds;
-                else {
-
-                    // Alter the squared distance curve to be closer to true Euclidean distance, without using an expensive sqrt call.
-                    euclideanFalloff *= invNFalloffThresholdsSq; // First, rescale to 0 to 1 in desired range
-                    euclideanFalloff = 1 - (1 - euclideanFalloff) * (1 - euclideanFalloff); // Apply 1-(1-t)^2 curve to counter some of the parabolic curve
-                    euclideanFalloff *= nFalloffThresholds; // Scale back up to the desired range, true to the non-squared distance.
-
-                    // Truncate to int to re-use existing threshold array.
-                    falloffIndex = (int)euclideanFalloff;
-                }
-
-                int boundedOffsetIndex = Math.max(0, falloffIndex + falloffIndexOffset);
-                if (boundedOffsetIndex < nFalloffThresholds) {
-                    float threshold = falloffThresholds[boundedOffsetIndex];
-                    if (random.nextDouble() < (double)threshold) {
-                        int y = getSurfaceY(levelAccessor, x, z, this.verticalPlacement);
-                        int yBounded = flag ? y : Math.min(boundingBox.minY(), y);
-                        currentBlockPos.set(x, yBounded, z);
+                if (threshold > 0.0f) {
+                    if (random.nextFloat() < threshold) {
+                        int worldX = dx + origin.getX();
+                        int worldZ = dz + origin.getZ();
+                        int y = getSurfaceY(levelAccessor, worldX, worldZ, this.verticalPlacement);
+                        int yBounded = isOnSurface ? y : Math.min(boundingBox.minY(), y);
+                        currentBlockPos.set(worldX, yBounded, worldZ);
                         if (Math.abs(yBounded - boundingBox.minY()) <= 3 && this.canBlockBeReplacedByNetherrackOrMagma(levelAccessor, currentBlockPos)) {
                             this.placeNetherrackOrMagma(random, levelAccessor, currentBlockPos);
                             if (this.properties.overgrown) {
@@ -80,8 +88,6 @@ public class MixinRuinedPortalPiece {
                 }
             }
         }
-
-        ci.cancel();
     }
 
     @Shadow
