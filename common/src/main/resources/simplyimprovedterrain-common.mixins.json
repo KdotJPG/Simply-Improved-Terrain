@@ -21,6 +21,7 @@
     "MixinLakeFeature",
     "MixinMultiNoiseBiomeSource",
     "MixinNetherForestVegetationFeature",
+    "MixinNoiseChunk",
     "MixinPerlinFractalNoise",
     "MixinRandomPatchFeature",
     "MixinRandomState",
