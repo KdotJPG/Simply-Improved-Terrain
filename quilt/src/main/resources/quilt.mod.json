@@ -31,16 +31,8 @@
         "version": "*"
       },
       {
-        "id": "quilt_base",
-        "version": "*"
-      },
-      {
         "id": "minecraft",
         "version": ">=1.19.4"
-      },
-      {
-        "id": "architectury",
-        "version": ">=8.1.79"
       }
     ]
   }

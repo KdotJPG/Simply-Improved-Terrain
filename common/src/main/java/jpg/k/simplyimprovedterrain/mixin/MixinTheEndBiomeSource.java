@@ -31,9 +31,10 @@ public class MixinTheEndBiomeSource implements FiddledBiomeResolver {
     @Shadow @Final private Holder<Biome> islands;
     @Shadow @Final private Holder<Biome> barrens;
 
-    // This was previously an @Overwrite for mod compatibility reasons.
-    // But @Overwrite is creating a mapping error in Forge, and the compatibility situation seems to have changed.
-    @Inject(method = "getNoiseBiome", at = @At("HEAD"), cancellable = true)
+    // This was previously an @Overwrite for mod compatibility reasons, but we need aliases to work around a loom issue.
+    // @Overwrite supports aliases, but not on public methods. @Inject is more flexible here.
+    // The compatibility situation also appears to have changed, in any case.
+    @Inject(method = {"getNoiseBiome", "method_38109", "m_203407_"}, at = @At("HEAD"), cancellable = true, remap = false)
     public void getNoiseBiome(int quartX, int quartY, int quartZ, Climate.Sampler sampler, CallbackInfoReturnable<Holder<Biome>> cir) {
         cir.setReturnValue(this.getBlockNoiseBiome(QuartPos.toBlock(quartX), QuartPos.toBlock(quartY), QuartPos.toBlock(quartZ), sampler));
     }
