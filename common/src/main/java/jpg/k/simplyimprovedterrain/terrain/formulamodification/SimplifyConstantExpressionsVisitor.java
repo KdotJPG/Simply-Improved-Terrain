@@ -24,7 +24,6 @@ enum SimplifyConstantExpressionsVisitor implements DensityFunction.Visitor {
                     isConstant(rangeChoice.whenOutOfRange()),
                 DensityFunctions.Clamp.class, (DensityFunction function) ->
                     function instanceof DensityFunctions.Clamp clamp && isConstant(clamp.input()),
-                DensityFunctions.Spline.class, (DensityFunction function) -> true,
                 DensityFunctions.Constant.class, (DensityFunction function) -> true
             );
 
@@ -33,7 +32,7 @@ enum SimplifyConstantExpressionsVisitor implements DensityFunction.Visitor {
     }
 
     private static boolean isEffectivelyConstant(DensityFunction function) {
-        Predicate<DensityFunction> constancyPredicate = KNOWN_CONSTANCY_PRESERVING_FUNCTION_CONSTANCY_PREDICATES.get(function);
+        Predicate<DensityFunction> constancyPredicate = KNOWN_CONSTANCY_PRESERVING_FUNCTION_CONSTANCY_PREDICATES.get(function.getClass());
         return constancyPredicate != null && constancyPredicate.test(function);
     }
 
