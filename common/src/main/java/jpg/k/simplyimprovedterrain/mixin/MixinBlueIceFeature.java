@@ -10,7 +10,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.BlueIceFeature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
-import net.minecraft.world.level.material.Material;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 
@@ -87,7 +86,7 @@ public class MixinBlueIceFeature {
 
             if (placementBlockPos != null) {
                 BlockState blockStateHere = worldGenLevel.getBlockState(placementBlockPos);
-                if (blockStateHere.getMaterial() == Material.AIR || blockStateHere.is(Blocks.WATER) || blockStateHere.is(Blocks.PACKED_ICE) || blockStateHere.is(Blocks.ICE)) {
+                if (blockStateHere.isAir() || blockStateHere.is(Blocks.WATER) || blockStateHere.is(Blocks.PACKED_ICE) || blockStateHere.is(Blocks.ICE)) {
                     for (Direction direction : Direction.values()) {
                         BlockState neighborBlockState = worldGenLevel.getBlockState(placementBlockPos.relative(direction));
                         if (neighborBlockState.is(Blocks.BLUE_ICE)) {
