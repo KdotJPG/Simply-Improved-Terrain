@@ -2,6 +2,7 @@ package jpg.k.simplyimprovedterrain.mixin;
 
 import jpg.k.simplyimprovedterrain.terrain.customdensityfunctions.ArrayBackedCache2D;
 import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseChunk;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,7 +20,7 @@ public class MixinNoiseChunk {
 
     @Inject(method = "wrapNew", at = @At(value = "RETURN"), cancellable = true)
     private void modifyWrapping(DensityFunction function, CallbackInfoReturnable<DensityFunction> cir) {
-        if (function instanceof NoiseChunk.Cache2D cache2D) {
+        if (cir.getReturnValue() instanceof NoiseChunk.Cache2D cache2D) {
             cir.setReturnValue(new ArrayBackedCache2D(firstCellX * cellWidth, firstCellZ * cellWidth, cache2D));
         }
     }

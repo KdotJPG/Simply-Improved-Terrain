@@ -3,6 +3,7 @@ package jpg.k.simplyimprovedterrain.terrain.formulamodification;
 import jpg.k.simplyimprovedterrain.terrain.customdensityfunctions.*;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
+import net.minecraft.world.level.levelgen.NoiseChunk;
 
 import java.util.List;
 import java.util.Map;
@@ -13,9 +14,18 @@ enum SeparateNoiseInterpolationsVisitor implements CourseAlteringVisitor {
 
     public DensityFunction mapAllFor(DensityFunction function) {
 
+        // Don't traverse into Cache2D.
+        if (function instanceof DensityFunctions.Marker marker &&
+                DensityFunctions.Marker.Type.Cache2D == marker.type()) return CleanUpMarkersVisitor.DEFAULT.mapAllFor(function);
+
         // Only consider `Interpolated` markers.
         if (!(function instanceof DensityFunctions.Marker marker) ||
                 DensityFunctions.Marker.Type.Interpolated != marker.type()) return function.mapAll(this);
+
+        // Don't traverse into or interpolate Cache2D.
+        DensityFunction wrappedFunction = CourseAlteringNode.unwrap(marker.wrapped());
+        if (wrappedFunction instanceof DensityFunctions.Marker wrappedMarker &&
+                DensityFunctions.Marker.Type.Cache2D == wrappedMarker.type()) return CleanUpMarkersVisitor.DEFAULT.mapAllFor(wrappedFunction);
 
         CheckForNoiseInUnapprovedInterpolatedFunctionsVisitor checkVisitor = new CheckForNoiseInUnapprovedInterpolatedFunctionsVisitor();
         function.mapAll(checkVisitor);

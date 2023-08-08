@@ -7,29 +7,29 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-// TODO make class with private members instead
-record CleanUpMarkersVisitor(boolean insideInterpolated, boolean insideCache2D) implements CourseAlteringVisitor {
+record CleanUpMarkersVisitor(FunctionEvaluationSituation situation) implements CourseAlteringVisitor {
     public static final CleanUpMarkersVisitor DEFAULT = new CleanUpMarkersVisitor();
 
-    public CleanUpMarkersVisitor(boolean insideInterpolated, boolean insideCache2D) {
-        this.insideInterpolated = insideInterpolated;
-        this.insideCache2D = insideCache2D;
+    public CleanUpMarkersVisitor(FunctionEvaluationSituation situation) {
+        this.situation = situation;
     }
 
     public CleanUpMarkersVisitor(CleanUpMarkersVisitor base) {
-        this(base.insideInterpolated, base.insideCache2D);
+        this(base.situation);
     }
 
     public CleanUpMarkersVisitor() {
-        this(false, false);
+        this(FunctionEvaluationSituation.ORDINARY);
     }
 
-    public CleanUpMarkersVisitor withInsideInterpolated(boolean insideInterpolated) {
-        return new CleanUpMarkersVisitor(insideInterpolated, insideCache2D);
-    }
-
-    public CleanUpMarkersVisitor withInsideCache2D(boolean insideCache2D) {
-        return new CleanUpMarkersVisitor(insideInterpolated, insideCache2D);
+    public CleanUpMarkersVisitor withNewSituation(FunctionEvaluationSituation situation) {
+        if (
+                this.situation == FunctionEvaluationSituation.INSIDE_CACHE_2D && situation != FunctionEvaluationSituation.INSIDE_CACHE_2D ||
+                this.situation != FunctionEvaluationSituation.ORDINARY && situation == FunctionEvaluationSituation.ORDINARY
+        ) {
+            throw new IllegalStateException("Trying to switch CleanUpMarkersVisitor from " + this.situation + " to " + situation + ".");
+        }
+        return new CleanUpMarkersVisitor(situation);
     }
 
     public DensityFunction mapAllFor(DensityFunction function) {
@@ -46,13 +46,13 @@ record CleanUpMarkersVisitor(boolean insideInterpolated, boolean insideCache2D) 
         Interpolated(DensityFunctions.Marker.Type.Interpolated) {
             public DensityFunction mapAllFor(CleanUpMarkersVisitor visitor, DensityFunctions.Marker marker) {
 
-                return visitor.insideInterpolated() || visitor.insideCache2D() ?
+                return visitor.situation() != FunctionEvaluationSituation.ORDINARY ?
 
                         // Remove marker if inside `Cache2D` or another `Interpolated`
-                        marker.wrapped().mapAll(visitor) :
+                        CourseAlteringNode.unwrap(marker.wrapped().mapAll(visitor)) :
 
                         // Otherwise skip `apply()` on this `Interpolated` instance, then wrap its argument tree accordingly.
-                        DensityFunctions.interpolated(marker.wrapped().mapAll(visitor.withInsideInterpolated(true)));
+                        DensityFunctions.interpolated(marker.wrapped().mapAll(visitor.withNewSituation(FunctionEvaluationSituation.INSIDE_INTERPOLATED)));
 
             }
 
@@ -64,14 +64,14 @@ record CleanUpMarkersVisitor(boolean insideInterpolated, boolean insideCache2D) 
         FlatCache(DensityFunctions.Marker.Type.FlatCache) {
             public DensityFunction mapAllFor(CleanUpMarkersVisitor visitor, DensityFunctions.Marker marker) {
 
-                return visitor.insideCache2D() ?
+                return visitor.situation() == FunctionEvaluationSituation.INSIDE_CACHE_2D ?
 
                         // Remove marker if inside `Cache2D`
-                        marker.wrapped().mapAll(visitor) :
+                        CourseAlteringNode.unwrap(marker.wrapped().mapAll(visitor)) :
 
                         // Otherwise skip `apply()` on this `FlatCache` instance, replace it with `Cache2D,
                         // and wrap its argument tree accordingly.
-                        DensityFunctions.cache2d(marker.wrapped().mapAll(visitor.withInsideCache2D(true)));
+                        DensityFunctions.cache2d(marker.wrapped().mapAll(visitor.withNewSituation(FunctionEvaluationSituation.INSIDE_CACHE_2D)));
 
             }
 
@@ -83,13 +83,13 @@ record CleanUpMarkersVisitor(boolean insideInterpolated, boolean insideCache2D) 
         Cache2D(DensityFunctions.Marker.Type.Cache2D) {
             public DensityFunction mapAllFor(CleanUpMarkersVisitor visitor, DensityFunctions.Marker marker) {
 
-                return visitor.insideCache2D() ?
+                return visitor.situation() == FunctionEvaluationSituation.INSIDE_CACHE_2D ?
 
                         // Remove marker if inside another `Cache2D`
-                        marker.wrapped().mapAll(visitor) :
+                        CourseAlteringNode.unwrap(marker.wrapped().mapAll(visitor)) :
 
                         // Otherwise skip `apply()` on this `Cache2D` instance, them wrap its argument tree accordingly.
-                        DensityFunctions.cache2d(marker.wrapped().mapAll(visitor.withInsideCache2D(true)));
+                        DensityFunctions.cache2d(marker.wrapped().mapAll(visitor.withNewSituation(FunctionEvaluationSituation.INSIDE_CACHE_2D)));
 
             }
 
@@ -102,7 +102,7 @@ record CleanUpMarkersVisitor(boolean insideInterpolated, boolean insideCache2D) 
             public DensityFunction mapAllFor(CleanUpMarkersVisitor visitor, DensityFunctions.Marker marker) {
 
                 // Remove `CacheOnce`.
-                return marker.wrapped().mapAll(visitor);
+                return CourseAlteringNode.unwrap(marker.wrapped().mapAll(visitor));
 
             }
 
@@ -115,7 +115,7 @@ record CleanUpMarkersVisitor(boolean insideInterpolated, boolean insideCache2D) 
             public DensityFunction mapAllFor(CleanUpMarkersVisitor visitor, DensityFunctions.Marker marker) {
 
                 // Remove `CacheAllInCell`. We'll add these back later, dynamically.
-                return marker.wrapped().mapAll(visitor);
+                return CourseAlteringNode.unwrap(marker.wrapped().mapAll(visitor));
 
             }
 

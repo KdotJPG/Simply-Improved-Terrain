@@ -1,6 +1,7 @@
 package jpg.k.simplyimprovedterrain.terrain.formulamodification;
 
 import com.mojang.serialization.Codec;
+import jpg.k.simplyimprovedterrain.terrain.formulamodification.caching.Caching;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.NoiseRouter;
@@ -43,8 +44,8 @@ public class TerrainFormulaModification {
         subject = mapAllFunction.apply(subject, SeparateNoiseInterpolationsVisitor.INSTANCE);
         //subject = mapAllFunction.apply(subject, ConsolidateNestedAssociativeFunctionsVisitor.INSTANCE); // TODO
         //subject = mapAllFunction.apply(subject, ConsolidateApprovedInterpolationsVisitor.INSTANCE); // TODO
-        //subject = mapAllFunction.apply(subject, new ReCacheVisitor()); // TODO
-        subject = mapAllFunction.apply(subject, RemoveCourseAlteringNodesVisitor.INSTANCE);
+
+        subject = Caching.applyCacheMarkers(subject, mapAllFunction, RemoveCourseAlteringNodesVisitor.INSTANCE);
 
         //if (subject instanceof NoiseRouter noiseRouter) debugPrintJson(noiseRouter.finalDensity());
 

@@ -4,7 +4,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
-record CourseAlteringNode(DensityFunction wrapped) implements DensityFunction.SimpleFunction {
+public record CourseAlteringNode(DensityFunction wrapped) implements DensityFunction.SimpleFunction {
     public DensityFunction mapAll(DensityFunction.Visitor visitor) {
 
         DensityFunction transformedFunction = (visitor instanceof CourseAlteringVisitor courseAlteringVisitor) ?
