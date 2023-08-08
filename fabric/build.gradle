@@ -2,6 +2,8 @@ plugins {
     id "com.github.johnrengelman.shadow" version "7.1.2"
 }
 
+archivesBaseName = rootProject.archives_base_name + "-FabriQuilt"
+
 architectury {
     platformSetupLoomIde()
     fabric()
@@ -70,7 +72,7 @@ components.java {
 publishing {
     publications {
         mavenFabric(MavenPublication) {
-            artifactId = rootProject.archives_base_name + "-Fabric-" + project.name
+            artifactId = rootProject.archives_base_name + "-FabriQuilt-" + project.name
             from components.java
         }
     }
