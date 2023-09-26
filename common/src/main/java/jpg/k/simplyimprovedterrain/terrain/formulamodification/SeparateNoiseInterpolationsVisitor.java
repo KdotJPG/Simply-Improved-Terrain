@@ -36,8 +36,9 @@ enum SeparateNoiseInterpolationsVisitor implements CourseAlteringVisitor {
                 // If this tree path contains noise inside unapproved functions, push it down then keep traversing.
                 interpolateArguments(CourseAlteringNode.unwrap(marker.wrapped())).mapAll(this) :
 
-                // Otherwise no need to traverse the path (note lack of `.mapAll()`)
-                function;
+                // Otherwise, no need to traverse the path (note lack of `.mapAll()` on this visitor)
+                // Instead, run a pass to make sure we use the low-resolution cache markers internally.
+                function.mapAll(InterpolationRelegationVisitor.INSTANCE);
     }
 
     public DensityFunction apply(DensityFunction densityFunction) {
@@ -178,7 +179,7 @@ enum SeparateNoiseInterpolationsVisitor implements CourseAlteringVisitor {
                             State.FOUND_NOISE_IN_UNAPPROVED_FUNCTION;
                     break;
 
-                // If we already found noise in an umapproved function, pass the message along.
+                // If we already found noise in an unapproved function, pass the message along.
                 case FOUND_NOISE_IN_UNAPPROVED_FUNCTION:
                     state = State.FOUND_NOISE_IN_UNAPPROVED_FUNCTION;
                     break;

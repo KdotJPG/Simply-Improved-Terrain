@@ -34,18 +34,19 @@ public record BuildCacheVisitor(FunctionEvaluationSituation situation, Map<Cache
             situationUpdate = switch(marker.type()) {
                 case Cache2D -> FunctionEvaluationSituation.INSIDE_CACHE_2D;
                 case Interpolated -> FunctionEvaluationSituation.INSIDE_INTERPOLATED;
+                case FlatCache -> FunctionEvaluationSituation.INSIDE_FLAT_CACHE;
                 default -> situationUpdate;
             };
 
-            // Cache2D nodes already on the tree indicate that we must cache, so they have a special handling.
-            // Part 1 is here: we will key the cache by the contents of the Cache2D, not the Cache2D node itself.
-            // Part 2 is below, where we mark the cache entry as markerDecided, adding it into the indexed list with the Cache2D marker.
-            if (situationUpdate == FunctionEvaluationSituation.INSIDE_CACHE_2D) {
+            // Cache2D and FlatCache nodes already on the tree indicate that we must cache, so they have a special handling.
+            // Part 1 is here: we will key the cache by the contents of the Cache2D/FlatCache, not the Cache2D/FlatCache node itself.
+            // Part 2 is below, where we mark the cache entry as markerDecided, adding it into the indexed list with the Cache2D/FlatCache marker.
+            if (situationUpdate == FunctionEvaluationSituation.INSIDE_CACHE_2D || situationUpdate == FunctionEvaluationSituation.INSIDE_FLAT_CACHE) {
                 keyFunction = CourseAlteringNode.unwrap(marker.wrapped());
             }
         }
 
-        // For Cache2D, this fulfills part 2 from the above.
+        // For Cache2D/FlatCache, this fulfills part 2 from the above.
         // For Interpolated, this has the effect of marking the node as something we never need to wrap with a cache marker.
         // Interpolator instances in NoiseChunk already function as caches on their own, so it would be redundant to
         // wrap an interpolation node with a CacheAllInCell.
@@ -53,8 +54,13 @@ public record BuildCacheVisitor(FunctionEvaluationSituation situation, Map<Cache
 
         FunctionEvaluationSituation newSituation = switch(situationUpdate) {
             case ORDINARY -> situation;
-            case INSIDE_CACHE_2D, INSIDE_INTERPOLATED -> {
-                if (situation != FunctionEvaluationSituation.ORDINARY) {
+            case INSIDE_CACHE_2D, INSIDE_INTERPOLATED, INSIDE_FLAT_CACHE -> {
+                FunctionEvaluationSituation expectedOriginalSituation = switch(situationUpdate) {
+                    case INSIDE_CACHE_2D, INSIDE_INTERPOLATED -> FunctionEvaluationSituation.ORDINARY;
+                    case INSIDE_FLAT_CACHE -> FunctionEvaluationSituation.INSIDE_INTERPOLATED;
+                    default -> throw new IllegalStateException();
+                };
+                if (situation != expectedOriginalSituation) {
                     throw new IllegalStateException("Density Function subtree situation " + situation + " becomes " + situationUpdate + ". " +
                             "Previous transformations should not have left these marker nodes composed like this.");
                 }
@@ -70,7 +76,7 @@ public record BuildCacheVisitor(FunctionEvaluationSituation situation, Map<Cache
                 // An equivalent function subtree has not yet been found, so create a new entry in the indexed list.
                 cacheIndex = indexedCachedVisitedFunctionEntries.size();
                 CacheEntry.DecisionState decisionState = markerDecidedAlready ? CacheEntry.DecisionState.MARKER_DECIDED : CacheEntry.DecisionState.UNDECIDED;
-                indexedCachedVisitedFunctionEntries.add(new CacheEntry(1, situation, decisionState, function));
+                indexedCachedVisitedFunctionEntries.add(new CacheEntry(1, newSituation, decisionState, function));
 
             } else {
 
@@ -100,11 +106,14 @@ public record BuildCacheVisitor(FunctionEvaluationSituation situation, Map<Cache
             DensityFunction.Visitor subVisitor = (newSituation != situation) ?
                     this.withNewSituation(newSituation) :
                     this;
-            DensityFunction visitedFunction = (markerDecidedAlready &&
-                        function instanceof DensityFunctions.Marker marker &&
-                        marker.type() == DensityFunctions.Marker.Type.Cache2D) ?
+            DensityFunction visitedFunction = (markerDecidedAlready && function instanceof DensityFunctions.Marker marker &&
+                        (marker.type() == DensityFunctions.Marker.Type.Cache2D || marker.type() == DensityFunctions.Marker.Type.FlatCache)) ?
                     // Prevents circular CacheEntry reference, where decided marker contents resolve to the same cache key as the marker itself (by design).
-                    DensityFunctions.cache2d(new CourseAlteringNode(CourseAlteringNode.unwrap(marker.wrapped()).mapAll(subVisitor))) :
+                    switch(marker.type()) {
+                        case Cache2D -> DensityFunctions.cache2d(new CourseAlteringNode(CourseAlteringNode.unwrap(marker.wrapped()).mapAll(subVisitor)));
+                        case FlatCache -> DensityFunctions.flatCache(new CourseAlteringNode(CourseAlteringNode.unwrap(marker.wrapped()).mapAll(subVisitor)));
+                        default -> throw new IllegalStateException();
+                    } :
                     function.mapAll(subVisitor);
             indexedCachedVisitedFunctionEntries.set(
                     index,

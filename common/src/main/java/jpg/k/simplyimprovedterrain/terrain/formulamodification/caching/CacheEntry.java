@@ -28,8 +28,9 @@ public record CacheEntry(int usageCount, FunctionEvaluationSituation situation, 
                         visitedFunction :
                         switch (situation) {
                             case ORDINARY -> DensityFunctions.cacheAllInCell(new CourseAlteringNode(visitedFunction));
-                            case INSIDE_CACHE_2D -> DensityFunctions.cache2d(new CourseAlteringNode(visitedFunction));
                             case INSIDE_INTERPOLATED -> DensityFunctions.cacheOnce(new CourseAlteringNode(visitedFunction));
+                            case INSIDE_CACHE_2D -> DensityFunctions.cache2d(new CourseAlteringNode(visitedFunction));
+                            case INSIDE_FLAT_CACHE -> DensityFunctions.flatCache(new CourseAlteringNode(visitedFunction));
                         }
         );
     }

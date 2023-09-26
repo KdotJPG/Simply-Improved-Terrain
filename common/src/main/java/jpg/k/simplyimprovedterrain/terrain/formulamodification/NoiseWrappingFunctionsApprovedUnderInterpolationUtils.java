@@ -141,7 +141,7 @@ final class NoiseWrappingFunctionsApprovedUnderInterpolationUtils {
             ),
             DensityFunctions.ShiftedNoise.class, new Handler(
                     (DensityFunction function) -> true, // Allow ShiftedNoise to be interpolated, even if its arguments contain noise (which they generally will)
-                    (DensityFunction function) -> function // But don't make that become the case when it's not.
+                    (DensityFunction function) -> function.mapAll(InterpolationRelegationVisitor.INSTANCE) // But don't make that become the case when it's not.
             )
     );
 }
