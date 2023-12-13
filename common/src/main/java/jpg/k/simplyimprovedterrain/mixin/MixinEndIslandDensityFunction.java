@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin(DensityFunctions.EndIslandDensityFunction.class)
+@Mixin(value = DensityFunctions.EndIslandDensityFunction.class, priority = 250)
 public class MixinEndIslandDensityFunction {
 
     private static final double END_VALUE_OFFSET = -8.0;

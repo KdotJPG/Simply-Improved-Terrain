@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin(BiomeManager.class)
+@Mixin(value = BiomeManager.class, priority = 250)
 public class MixinBiomeManager {
 
     private static final double SQRT3 = Math.sqrt(3.0);

@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * Adds noise to circular deposits.
  * Visual impact: ★★★★★
  */
-@Mixin(DiskFeature.class)
+@Mixin(value = DiskFeature.class, priority = 250)
 public abstract class MixinDiskFeature {
 
     private static final double NOISE_FREQUENCY_XZ = 0.155;

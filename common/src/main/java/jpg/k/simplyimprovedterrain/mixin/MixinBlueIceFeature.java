@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Replaces the pseudonormal-based distribution with an ellipsoid-based one.
  * Visual impact: ★★★☆☆ (when excavated)
  */
-@Mixin(BlueIceFeature.class)
+@Mixin(value = BlueIceFeature.class, priority = 250)
 public class MixinBlueIceFeature {
 
     private static final int MAX_PLACEMENT_ATTEMPTS = 200;

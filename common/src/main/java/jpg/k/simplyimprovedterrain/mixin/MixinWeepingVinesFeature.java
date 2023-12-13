@@ -21,7 +21,7 @@ import static net.minecraft.world.level.levelgen.feature.WeepingVinesFeature.pla
  * Replaces pseudo-normal distribution with circular..
  * Visual impact: ★★★☆☆
  */
-@Mixin(WeepingVinesFeature.class)
+@Mixin(value = WeepingVinesFeature.class, priority = 250)
 public class MixinWeepingVinesFeature {
 
     // This mixin uses rejection sampling instead of trigonometric formulas.

@@ -11,20 +11,21 @@ import net.minecraft.world.level.levelgen.feature.DripstoneUtils;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.DripstoneClusterConfiguration;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
 /**
  * Replaces axis-scaled rectangular placement with rotated ellipse placement.
  * Visual impact: ★☆☆☆☆ (the principle is strong, but here it's not always clear where the patch borders are anyway)
  */
-@Mixin(DripstoneClusterFeature.class)
+@Mixin(value = DripstoneClusterFeature.class, priority = 250)
 public abstract class MixinDripstoneClusterFeature {
 
     /**
      * @author K.jpg
      * @reason No rectangles allowed :P
      */
-    //@Overwrite
+    @Overwrite
     public boolean place(FeaturePlaceContext<DripstoneClusterConfiguration> featurePlaceContext) {
         WorldGenLevel worldGenLevel = featurePlaceContext.level();
         BlockPos origin = featurePlaceContext.origin();

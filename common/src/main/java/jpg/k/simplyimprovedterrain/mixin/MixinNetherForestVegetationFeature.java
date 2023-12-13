@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Replaces pseudo-normal distribution with ellipsoidal.
  * Visual impact: ★★★☆☆
  */
-@Mixin(NetherForestVegetationFeature.class)
+@Mixin(value = NetherForestVegetationFeature.class, priority = 250)
 public class MixinNetherForestVegetationFeature {
 
     /**

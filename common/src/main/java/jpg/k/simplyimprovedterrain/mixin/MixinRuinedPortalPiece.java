@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * Replaces Manhattan falloff with Euclidean.
  * Visual impact: ★★★★★
  */
-@Mixin(RuinedPortalPiece.class)
+@Mixin(value = RuinedPortalPiece.class, priority = 250)
 public abstract class MixinRuinedPortalPiece extends StructurePiece {
 
     // Continuous replacement for vanilla's discrete falloff threshold values.

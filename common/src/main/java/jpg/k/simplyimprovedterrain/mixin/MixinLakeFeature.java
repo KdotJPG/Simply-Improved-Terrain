@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * Visual impact: ★★★★☆
  */
 @SuppressWarnings("deprecation")
-@Mixin(LakeFeature.class)
+@Mixin(value = LakeFeature.class, priority = 250)
 public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration> {
 
     private static final BlockState AIR = Blocks.CAVE_AIR.defaultBlockState();

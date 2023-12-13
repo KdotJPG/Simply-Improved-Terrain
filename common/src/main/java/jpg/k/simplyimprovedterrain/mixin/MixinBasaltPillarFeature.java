@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * Replaces the clamped hyperbolic falloff with Euclidean falloff.
  * Visual impact: ★★★☆☆
  */
-@Mixin(BasaltPillarFeature.class)
+@Mixin(value = BasaltPillarFeature.class, priority = 250)
 public abstract class MixinBasaltPillarFeature {
 
     private static final int SPREAD_RADIUS = 4;

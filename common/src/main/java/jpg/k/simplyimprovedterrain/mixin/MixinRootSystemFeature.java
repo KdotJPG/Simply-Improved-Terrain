@@ -17,7 +17,7 @@ import java.util.function.Predicate;
  * Replaces pseudo-normal distribution with ellipsoidal.
  * Visual impact: ★★★☆☆ (when excavated)
  */
-@Mixin(RootSystemFeature.class)
+@Mixin(value = RootSystemFeature.class, priority = 250)
 public class MixinRootSystemFeature {
 
     /**

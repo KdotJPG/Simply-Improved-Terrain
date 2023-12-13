@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Replaces pseudo-normal distribution with circular..
  * Visual impact: ★★★☆☆
  */
-@Mixin(SeaPickleFeature.class)
+@Mixin(value = SeaPickleFeature.class, priority = 250)
 public class MixinSeaPickleFeature {
 
     private static final float PLACEMENT_RADIUS = 8.0f * DistributionUtils.RADIUS_RATIO_SPHERE_TO_CUBE;

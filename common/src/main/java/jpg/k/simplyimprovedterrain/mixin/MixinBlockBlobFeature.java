@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Replaces the clone-and-offset variation with ellipsoid rotation and noise.
  * Visual impact: ★★★☆☆
  */
-@Mixin(BlockBlobFeature.class)
+@Mixin(value = BlockBlobFeature.class, priority = 250)
 public class MixinBlockBlobFeature extends Feature<BlockStateConfiguration> {
 
     private static final float MIN_RADIUS = 1.42f;

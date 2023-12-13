@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Replaces shaping formula with a piecewise spheroid. Adds noise to break up regularity.
  * Visual impact: ★★★★★
  */
-@Mixin(EndIslandFeature.class)
+@Mixin(value = EndIslandFeature.class, priority = 250)
 public abstract class MixinEndIslandFeature extends Feature<NoneFeatureConfiguration> {
 
     // Sphere radius to base the island shape off of.

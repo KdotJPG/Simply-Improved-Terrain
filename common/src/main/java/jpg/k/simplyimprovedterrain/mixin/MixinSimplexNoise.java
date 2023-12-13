@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin(SimplexNoise.class)
+@Mixin(value = SimplexNoise.class, priority = 250)
 public class MixinSimplexNoise implements IMixinSimplexNoise {
 
     @Shadow @Final private int[] p;

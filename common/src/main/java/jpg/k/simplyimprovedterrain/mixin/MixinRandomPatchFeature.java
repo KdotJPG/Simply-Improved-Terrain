@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Replaces pseudo-normal distribution with ellipsoidal.
  * Visual impact: ★★★☆☆
  */
-@Mixin(RandomPatchFeature.class)
+@Mixin(value = RandomPatchFeature.class, priority = 250)
 public class MixinRandomPatchFeature {
 
     /**

@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * Replaces octahedral spread with ellipsoidal; adds noise for variation.
  * Visual impact: ★★★★★
  */
-@Mixin(ReplaceBlobsFeature.class)
+@Mixin(value = ReplaceBlobsFeature.class, priority = 250)
 public class MixinReplaceBlobsFeature extends Feature<ReplaceSphereConfiguration> {
 
     private static final double NOISE_FREQUENCY_XZ = 0.15;

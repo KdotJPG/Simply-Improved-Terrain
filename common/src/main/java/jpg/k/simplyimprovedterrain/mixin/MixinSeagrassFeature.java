@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.Overwrite;
  * Replaces pseudo-normal distribution with circular..
  * Visual impact: ★★★☆☆
  */
-@Mixin(SeagrassFeature.class)
+@Mixin(value = SeagrassFeature.class, priority = 250)
 public class MixinSeagrassFeature {
 
     private static final float PLACEMENT_RADIUS = 8.0f * DistributionUtils.RADIUS_RATIO_CIRCLE_TO_SQUARE;
