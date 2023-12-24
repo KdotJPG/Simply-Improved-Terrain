@@ -39,7 +39,6 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
     private static final float NOISY_BARRIER_THICKNESS_Y_MAX = 1.5f;
     private static final float NOISY_BARRIER_THICKNESS_Y_MIN = 0.75f;
 
-    private static final double LIQUID_DEPTH_PADDED = LIQUID_DEPTH + NOISY_BARRIER_THICKNESS_Y_MAX;
     private static final double SURFACE_CAVITY_DEPTH_PADDED = SURFACE_CAVITY_DEPTH + NOISY_BARRIER_THICKNESS_Y_MAX;
     private static final int REQUIRED_CLEARANCE_BELOW = (int)Math.ceil(LIQUID_DEPTH + Math.max(1.0, NOISY_BARRIER_THICKNESS_Y_MAX));
     private static final int REQUIRED_CLEARANCE_ABOVE = (int)Math.ceil(SURFACE_CAVITY_DEPTH + Math.max(1.0, NOISY_BARRIER_THICKNESS_Y_MAX));
@@ -75,7 +74,7 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
 
     /**
      * @author K.jpg
-     * @reason Rework to increase directional uniformity
+     * @reason Targeted injects/redirects/wraps would get quite messy here.
      */
     @Overwrite
     public boolean place(FeaturePlaceContext<LakeFeature.Configuration> featurePlaceContext) {
@@ -90,6 +89,10 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
         if (origin.getY() - REQUIRED_CLEARANCE_BELOW <= worldGenLevel.getMinBuildHeight()) {
             return false;
         } else {
+
+            // Quick compatibility fix for Structure Gel, which uses this as an injection point into the Vanilla code.
+            // Note that the value will not actually be used here, nor is it used in Structure Gel.
+            BlockPos noOpBlockPos = origin.below(REQUIRED_CLEARANCE_BELOW);
 
             int[] states = new int[PLACEABLE_DIAMETER * PLACEABLE_DIAMETER * TOTAL_VERTICAL_CLEARANCE];
             int ellipsoidCount = random.nextInt(MAX_ELLIPSOID_COUNT - MIN_ELLIPSOID_COUNT) + MIN_ELLIPSOID_COUNT;
