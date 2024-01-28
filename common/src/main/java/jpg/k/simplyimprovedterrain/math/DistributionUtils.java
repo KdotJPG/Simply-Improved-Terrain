@@ -61,12 +61,31 @@ public class DistributionUtils {
         float sphereTheta = random.nextFloat() * Mth.TWO_PI;
         float sphereXZScale = Mth.sqrt(1.0f - sphereY * sphereY);
         float otherAngle = random.nextFloat() * Mth.TWO_PI;
-        return new Matrix3f().rotation(
+        return MthJoml.rotation(
                 otherAngle,
                 sphereXZScale * Mth.cos(sphereTheta),
                 sphereY,
-                sphereXZScale * Mth.sin(sphereTheta)
+                sphereXZScale * Mth.sin(sphereTheta),
+                new Matrix3f()
         );
+    }
+
+    public static Matrix3f randomRotation3D(RandomSource random, float maxTiltY) {
+
+        // First, rotate in the XZ plane.
+        Matrix3f rotation = MthJoml.rotationY(random.nextFloat() * Mth.TWO_PI, new Matrix3f());
+
+        // Then tilt by a random amount within a random vertical plane.
+        // Note that `rotateLocal` is a pre-multiplication, so the resulting matrix performs the XZ rotation first.
+        float tiltAmount = random.nextFloat() * maxTiltY - 1.0f; // Incidentally flips, but that's OK.
+        float tiltPlaneAngle = random.nextFloat() * Mth.TWO_PI;
+        MthJoml.rotateLocal(
+                Mth.sqrt(1.0f - tiltAmount * tiltAmount), tiltAmount,
+                Mth.cos(tiltPlaneAngle), 0, Mth.sin(tiltPlaneAngle),
+                rotation, rotation
+        );
+
+        return rotation;
     }
 
 }

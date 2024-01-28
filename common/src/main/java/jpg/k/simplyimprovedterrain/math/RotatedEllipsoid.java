@@ -9,6 +9,10 @@ public record RotatedEllipsoid(float ax, float ay, float az, float bx, float by,
         return createFromRotationAndRadii(DistributionUtils.randomRotation3D(random), radiusA, radiusB, radiusC);
     }
 
+    public static RotatedEllipsoid createFromRandomAndRadii(RandomSource random, float maxTiltY, float radiusA, float radiusB, float radiusC) {
+        return createFromRotationAndRadii(DistributionUtils.randomRotation3D(random, maxTiltY), radiusA, radiusB, radiusC);
+    }
+
     public static RotatedEllipsoid createFromRotationAndRadii(Matrix3f rotationMatrix, float radiusA, float radiusB, float radiusC) {
         return new RotatedEllipsoid(
                 rotationMatrix.m00 / radiusA,

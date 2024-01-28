@@ -18,13 +18,14 @@ import org.spongepowered.asm.mixin.Overwrite;
 
 /**
  * Replaces the clone-and-offset variation with ellipsoid rotation and noise.
- * Visual impact: ★★★☆☆
+ * Visual impact: ★★★★☆
  */
 @Mixin(value = BlockBlobFeature.class, priority = 250)
 public class MixinBlockBlobFeature extends Feature<BlockStateConfiguration> {
 
-    private static final float MIN_RADIUS = 1.42f;
-    private static final float MAX_RADIUS = 3.6f;
+    private static final float MIN_RADIUS = 1.32f;
+    private static final float MAX_RADIUS = 2.67f;
+    private static final float MAX_TILT = 0.27f;
 
     private static final double NOISE_FREQUENCY_XZ = 0.2;
     private static final double NOISE_FREQUENCY_Y = 0.2;
@@ -38,7 +39,7 @@ public class MixinBlockBlobFeature extends Feature<BlockStateConfiguration> {
 
     /**
      * @author K.jpg
-     * @reason Scale vectors not axes
+     * @reason Per-axis samples and integer-locked displacement chains are difficult to rework using targeted mixins.
      */
     @Overwrite
     public boolean place(FeaturePlaceContext<BlockStateConfiguration> featurePlaceContext) {
@@ -64,19 +65,21 @@ public class MixinBlockBlobFeature extends Feature<BlockStateConfiguration> {
             return false;
         }
 
-        // Two randomly scaled and oriented ellipsoids.
+        // Two randomly oriented ellipsoids with predefined dimensions.
         // We will mix between these with noise.
         RotatedEllipsoid ellipsoidA = RotatedEllipsoid.createFromRandomAndRadii(
                 random,
-                Mth.randomBetween(random, MIN_RADIUS, MAX_RADIUS),
-                Mth.randomBetween(random, MIN_RADIUS, MAX_RADIUS),
-                Mth.randomBetween(random, MIN_RADIUS, MAX_RADIUS)
+                MAX_TILT,
+                MAX_RADIUS,
+                MIN_RADIUS,
+                MIN_RADIUS
         );
         RotatedEllipsoid ellipsoidB = RotatedEllipsoid.createFromRandomAndRadii(
                 random,
-                Mth.randomBetween(random, MIN_RADIUS, MAX_RADIUS),
-                Mth.randomBetween(random, MIN_RADIUS, MAX_RADIUS),
-                Mth.randomBetween(random, MIN_RADIUS, MAX_RADIUS)
+                MAX_TILT,
+                MAX_RADIUS,
+                MIN_RADIUS,
+                MIN_RADIUS
         );
 
         BlockPos.MutableBlockPos currentBlockPos = new BlockPos.MutableBlockPos();
