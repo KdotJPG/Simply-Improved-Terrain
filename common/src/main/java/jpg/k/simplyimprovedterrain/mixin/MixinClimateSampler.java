@@ -7,15 +7,21 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin(Climate.Sampler.class)
+import java.util.List;
+import java.util.function.Function;
+
+@Mixin(value = Climate.Sampler.class, priority = 500)
 public class MixinClimateSampler implements IMixinClimateSampler {
+
     @Shadow @Final private DensityFunction temperature;
     @Shadow @Final private DensityFunction humidity;
-    @Shadow @Final private DensityFunction continentalness;
+    @Shadow @Final private DensityFunction continentalness; // Should be called continentality! :P
     @Shadow @Final private DensityFunction erosion;
     @Shadow @Final private DensityFunction depth;
     @Shadow @Final private DensityFunction weirdness;
-    
+
+    @Shadow @Final private List<Climate.ParameterPoint> spawnTarget;
+
     public Climate.TargetPoint sampleGranular(int blockX, int blockY, int blockZ) {
         DensityFunction.SinglePointContext singlePointContext = new DensityFunction.SinglePointContext(blockX, blockY, blockZ);
         return Climate.target(
@@ -25,6 +31,18 @@ public class MixinClimateSampler implements IMixinClimateSampler {
                 (float)this.erosion.compute(singlePointContext),
                 (float)this.depth.compute(singlePointContext),
                 (float)this.weirdness.compute(singlePointContext)
+        );
+    }
+
+    public Climate.Sampler transformAll(Function<DensityFunction, DensityFunction> transformer) {
+        return new Climate.Sampler(
+                transformer.apply(temperature),
+                transformer.apply(humidity),
+                transformer.apply(continentalness),
+                transformer.apply(erosion),
+                transformer.apply(depth),
+                transformer.apply(weirdness),
+                spawnTarget
         );
     }
 }
