@@ -1,6 +1,7 @@
 package jpg.k.simplyimprovedterrain.mixin;
 
 import jpg.k.simplyimprovedterrain.biome.BiomeFiddleHelper;
+import jpg.k.simplyimprovedterrain.biome.CachedIndexedBiomeScorer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -23,8 +24,8 @@ public class MixinBiomeManager {
     @Shadow @Final private long biomeZoomSeed;
     @Shadow @Final private BiomeManager.NoiseBiomeSource noiseBiomeSource;
 
-    private static final ThreadLocal<BiomeFiddleHelper.BiomeAndWeight[]> biomeAndWeightPairsThreadLocal
-            = ThreadLocal.withInitial(() -> new BiomeFiddleHelper.BiomeAndWeight[MAX_SEARCH_SIZE]);
+    private final ThreadLocal<CachedIndexedBiomeScorer> cachedIndexedBiomeDataThreadLocal
+            = ThreadLocal.withInitial(CachedIndexedBiomeScorer::new);
 
     /**
      * @author K.jpg
@@ -50,8 +51,8 @@ public class MixinBiomeManager {
         double yDelta = (offsetY - (yStart << QuartPos.BITS)) * (1.0 / QuartPos.SIZE);
         double zDelta = (offsetZ - (zStart << QuartPos.BITS)) * (1.0 / QuartPos.SIZE);
 
-        BiomeFiddleHelper.BiomeAndWeight[] biomeAndWeightPairs = biomeAndWeightPairsThreadLocal.get();
-        int nUniqueBiomesFound = 0;
+        CachedIndexedBiomeScorer cachedIndexedBiomeScorer = cachedIndexedBiomeDataThreadLocal.get();
+        cachedIndexedBiomeScorer.clearWeights();
 
         for (int cz = 0, cy = 0, cx = 0;;) {
             double fiddledDistanceSquared = BiomeFiddleHelper.getFiddledDistance(this.biomeZoomSeed, cx + xStart, cy + yStart, cz + zStart, xDelta - cx, yDelta - cy, zDelta - cz);
@@ -60,21 +61,11 @@ public class MixinBiomeManager {
                 double falloff = 3 - fiddledDistanceSquared;
                 falloff *= falloff * falloff;
 
-                Holder<Biome> biomeHolderHere = this.noiseBiomeSource.getNoiseBiome(cx + xStart, cy + yStart, cz + zStart);
-                Biome biomeHere = biomeHolderHere.value();
-                int i = 0;
-                for (; i < nUniqueBiomesFound; i++) {
-                    BiomeFiddleHelper.BiomeAndWeight biomeAndWeightPair = biomeAndWeightPairs[i];
-                    if (biomeHere.equals(biomeAndWeightPair.biome())) {
-                        biomeAndWeightPairs[i] = new BiomeFiddleHelper.BiomeAndWeight(biomeHere, biomeHolderHere, biomeAndWeightPair.weight() + falloff);
-                        break;
-                    }
-                }
-                if (i == nUniqueBiomesFound) {
-                    biomeAndWeightPairs[i] = new BiomeFiddleHelper.BiomeAndWeight(biomeHere, biomeHolderHere, falloff);
-                    nUniqueBiomesFound++;
-                }
-
+                int iBiome = cachedIndexedBiomeScorer.getCachedBiomeIndex(
+                        cx + xStart, cy + yStart, cz + zStart,
+                        this.noiseBiomeSource::getNoiseBiome
+                );
+                cachedIndexedBiomeScorer.addWeight(iBiome, falloff);
             }
 
             cz++;
@@ -87,17 +78,7 @@ public class MixinBiomeManager {
             if (cx >= xCount) break;
         }
 
-        double bestWeight = Double.NEGATIVE_INFINITY;
-        Holder<Biome> bestBiomeHolder = null;
-        for (int i = 0; i < nUniqueBiomesFound; i++) {
-            BiomeFiddleHelper.BiomeAndWeight biomeAndWeightPair = biomeAndWeightPairs[i];
-            if (biomeAndWeightPair.weight() > bestWeight) {
-                bestWeight = biomeAndWeightPair.weight();
-                bestBiomeHolder = biomeAndWeightPair.holder();
-            }
-        }
-
-        return bestBiomeHolder;
+        return cachedIndexedBiomeScorer.chooseWinner();
     }
 
 }
