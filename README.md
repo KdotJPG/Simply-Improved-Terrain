@@ -2,14 +2,12 @@
 
 Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on increasing directional variety, grid independence, and overall shape variation. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks.
 
-### Changes:
+### Changes Applied:
 
-- Mitigates square corrugations in terrain curvature by splitting 3D-sampled noise into separate interpolation channels, and removing interpolation from 2D-sampled noise.
-- Removes 45-90-degree bias from large-scale terrain shapes by applying domain rotation to noise samplers.
-- Localizes shelf height variation in windswept/shattered terrain by adding per-cell offsets to the corresponding samplers.
-- Rechannels per-seed noise layer interaction characteristics into maximized per-area variation by standardizing sampler offsets.
-- Reduces 45-degree artifacts in ice and surface patterns by expanding the underlying gradient vector table.
-- Cleans up interval-lock from biome border surface patterns by correcting the sample loop range, switching to aggregated weight falloff, and bypassing subsampling.
-- Removes grid effects from the End island generator, and smoothes intersection transitions, by switching to full-resolution metaballs.
-- Rounds out shape distributions of placed terrain features, including lava lakes and basalt blobs, by switching to isotropic spread formulas.
-- Breaks up monotony in surface deposit and small End island features by adding falloff noise.
+- **Sharpens Terrain Curvature**: Reduces square-shaped distortions in the terrain by separating 3D noise into independent interpolation channels and eliminating interpolation from 2D noise.
+- **Reduces Angular Bias**: Mitigates the 45° and 90° directional tendencies in larger-scale terrain features by rotating the noise sampling domain.
+- **Curbs Global Seed Consequences** Standardizes sampler offsets to maximize per-area variation and eliminate global disparities, while localizing shelf height variation in windswept/shattered terrain.
+- **Minimizes Ice and Surface Artifacts**: Softens the 45° bias in ice and surface patterns by expanding the underlying gradient vector table.
+- **Cleans Up Blocky Biome Borders** Improves biome transitions by correcting the sample loop range, switching to aggregated falloff blending, and bypassing subsampling.
+- **Polishes Terrain Features**: Enhances the natural shapes of terrain features, such as lava lakes and clay deposits, by rounding out spread formulas and introducing falloff noise.
+- **Refines End Island Generation**: Sharpens transitions and reduces grid artifacting in the large End island generator by switching to full-resolution metaballs, while small islands receive falloff noise for shape variation.

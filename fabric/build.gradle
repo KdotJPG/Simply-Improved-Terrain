@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id "com.github.johnrengelman.shadow"
 }
 
 archivesBaseName = rootProject.archives_base_name + "-FabriQuilt"
@@ -25,7 +25,7 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
     modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
 
-    include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.2.0")))
+    include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:${rootProject.mixinextras_version}")))
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }

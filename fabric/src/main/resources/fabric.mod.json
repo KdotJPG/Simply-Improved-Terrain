@@ -3,14 +3,14 @@
   "id": "simplyimprovedterrain",
   "version": "${version}",
   "name": "Simply Improved Terrain",
-  "description": "Rewrites terrain generation components in Minecraft to improve their visual results.",
+  "description": "Rewrites terrain generation components to improve their visual results.",
   "authors": [
     "K.jpg"
   ],
   "contact": {
     "sources": "https://github.com/KdotJPG/Simply-Improved-Terrain"
   },
-  "license": "MIT License",
+  "license": "MIT-0 License",
   "icon": "assets/simplyimprovedterrain/icon.png",
   "environment": "*",
   "entrypoints": {

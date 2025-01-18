@@ -1,7 +1,7 @@
 modLoader = "javafml"
 loaderVersion = "[44,)"
 #issueTrackerURL = ""
-license = "MIT License"
+license = "MIT-0 License"
 
 [[mods]]
 modId = "simplyimprovedterrain"
@@ -9,7 +9,7 @@ version = "${version}"
 displayName = "Simply Improved Terrain"
 authors = "K.jpg"
 description = '''
-Rewrites terrain generation components in Minecraft to improve their visual results.
+Rewrites terrain generation components to improve their visual results.
 '''
 #logoFile = ""
 

@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id "com.github.johnrengelman.shadow"
 }
 
 archivesBaseName = rootProject.archives_base_name + "-Forge"
@@ -32,7 +32,7 @@ configurations {
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.forge_version}"
 
-    implementation(include("io.github.llamalad7:mixinextras-forge:0.2.0"))
+    implementation(include("io.github.llamalad7:mixinextras-forge:${rootProject.mixinextras_version}"))
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }

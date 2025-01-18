@@ -8,6 +8,7 @@ out/
 output/
 bin/
 libs/
+.architectury_transformer/
 
 .classpath
 .project
