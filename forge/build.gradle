@@ -1,3 +1,5 @@
+// NOTE: forge::runClient is currently broken, but forge:build continues to work.
+
 plugins {
     id "com.github.johnrengelman.shadow"
 }
@@ -51,17 +53,17 @@ shadowJar {
     exclude "architectury.common.json"
 
     configurations = [project.configurations.shadowCommon]
-    classifier "dev-shadow"
+    archiveClassifier = "dev-shadow"
 }
 
 remapJar {
     input.set shadowJar.archiveFile
     dependsOn shadowJar
-    classifier null
+    archiveClassifier = null
 }
 
 jar {
-    classifier "dev"
+    archiveClassifier = "dev"
 }
 
 sourcesJar {
@@ -88,4 +90,8 @@ publishing {
     repositories {
         // Add repositories to publish to here.
     }
+}
+
+configurations.all {
+    resolutionStrategy.force("net.sf.jopt-simple:jopt-simple:5.0.4")
 }

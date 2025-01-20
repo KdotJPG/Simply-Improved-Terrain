@@ -1,13 +1,13 @@
 package jpg.k.simplyimprovedterrain.terrain.customdensityfunctions;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
 import java.util.function.BiConsumer;
 
 public final class CustomDensityFunctions {
 
-    public static void bootstrap(BiConsumer<String, Codec<? extends DensityFunction>> callback) {
+    public static void bootstrap(BiConsumer<String, MapCodec<? extends DensityFunction>> callback) {
         callback.accept(SmoothRangeChoice.SERIALIZED_NAME, SmoothRangeChoice.CODEC.codec());
         callback.accept(MultiArgumentSimpleFunction.SERIALIZED_NAME, MultiArgumentSimpleFunction.CODEC.codec());
         callback.accept(MultiSmoothMinOrMax.SERIALIZED_NAME, MultiSmoothMinOrMax.CODEC.codec());

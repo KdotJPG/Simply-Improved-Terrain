@@ -1,6 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[44,)"
-#issueTrackerURL = ""
+loaderVersion = "[4,)"
 license = "MIT-0 License"
 
 [[mods]]
@@ -11,18 +10,20 @@ authors = "K.jpg"
 description = '''
 Rewrites terrain generation components to improve their visual results.
 '''
-#logoFile = ""
 
 [[dependencies.simplyimprovedterrain]]
-modId = "forge"
-mandatory = true
-versionRange = "[44,)"
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.simplyimprovedterrain]]
 modId = "minecraft"
-mandatory = true
-versionRange = "[1.21,)"
+type = "required"
+versionRange = "[1.21.1,)"
 ordering = "NONE"
 side = "BOTH"
+
+[[mixins]]
+config = "simplyimprovedterrain-common.mixins.json"

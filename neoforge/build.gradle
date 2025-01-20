@@ -1,20 +1,22 @@
 plugins {
-    id "com.github.johnrengelman.shadow"
+    id "com.github.johnrengelman.shadow" version "7.1.2"
 }
 
-archivesBaseName = rootProject.archives_base_name + "-Quilt"
-
-repositories {
-    maven { url "https://maven.quiltmc.org/repository/release/" }
-}
+archivesBaseName = rootProject.archives_base_name + "-NeoForge"
 
 architectury {
     platformSetupLoomIde()
-    loader("quilt")
+    neoForge()
 }
 
 loom {
     accessWidenerPath = project(":common").loom.accessWidenerPath
+
+    neoForge {
+        // convertAccessWideners = true
+        // extraAccessWideners.add loom.accessWidenerPath.get().asFile.name
+        // TODO re-enable when Architectury brings Access Widener conversion to NeoForge.
+    }
 }
 
 configurations {
@@ -22,32 +24,35 @@ configurations {
     shadowCommon // Don't use shadow from the shadow plugin since it *excludes* files.
     compileClasspath.extendsFrom common
     runtimeClasspath.extendsFrom common
-    developmentQuilt.extendsFrom common
+    developmentNeoForge.extendsFrom common
+}
+
+repositories {
+    maven {
+        name = 'NeoForged'
+        url = 'https://maven.neoforged.net/releases'
+    }
 }
 
 dependencies {
-    modImplementation "org.quiltmc:quilt-loader:${rootProject.quilt_loader_version}"
-    modApi "org.quiltmc.quilted-fabric-api:quilted-fabric-api:${rootProject.quilt_fabric_api_version}"
+    neoForge "net.neoforged:neoforge:$rootProject.neoforge_version"
 
-    include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:${rootProject.mixinextras_version}")))
+    implementation(include("io.github.llamalad7:mixinextras-neoforge:0.2.0"))
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
-    shadowCommon(project(path: ":common", configuration: "transformProductionQuilt")) { transitive false }
-    common(project(path: ":fabric-like", configuration: "namedElements")) { transitive false }
-    shadowCommon(project(path: ":fabric-like", configuration: "transformProductionQuilt")) { transitive false }
+    shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) { transitive = false }
 }
 
 processResources {
-    inputs.property "group", rootProject.maven_group
     inputs.property "version", project.version
 
-    filesMatching("quilt.mod.json") {
-        expand "group": rootProject.maven_group,
-                "version": project.version
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand "version": project.version
     }
 }
 
 shadowJar {
+    exclude "fabric.mod.json"
     exclude "architectury.common.json"
 
     configurations = [project.configurations.shadowCommon]
@@ -55,7 +60,6 @@ shadowJar {
 }
 
 remapJar {
-    injectAccessWidener = true
     input.set shadowJar.archiveFile
     dependsOn shadowJar
     archiveClassifier = null
@@ -79,8 +83,8 @@ components.java {
 
 publishing {
     publications {
-        mavenQuilt(MavenPublication) {
-            artifactId = rootProject.archives_base_name + "-Quilt-" + project.name
+        mavenForge(MavenPublication) {
+            artifactId = rootProject.archives_base_name + "-Forge-" + project.name
             from components.java
         }
     }

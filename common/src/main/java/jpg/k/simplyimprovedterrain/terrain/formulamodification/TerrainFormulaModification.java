@@ -1,6 +1,6 @@
 package jpg.k.simplyimprovedterrain.terrain.formulamodification;
 
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import jpg.k.simplyimprovedterrain.terrain.formulamodification.caching.Caching;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.world.level.levelgen.DensityFunction;
@@ -12,8 +12,8 @@ import java.util.function.BiFunction;
 
 public class TerrainFormulaModification {
 
-    public static void bootstrap(BiConsumer<String, Codec<? extends DensityFunction>> callback) {
-        callback.accept(CourseAlteringNode.SERIALIZED_NAME, CourseAlteringNode.CODEC.codec());
+    public static void bootstrap(BiConsumer<String, MapCodec<? extends DensityFunction>> callback) {
+        callback.accept(CourseAlteringNode.SERIALIZED_NAME, CourseAlteringNode.CODEC.codec()    );
     }
 
     public static NoiseRouter translateFormula(NoiseRouter noiseRouter, HolderGetter<NormalNoise.NoiseParameters> noiseParametersRegistry) {

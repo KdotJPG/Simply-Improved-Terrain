@@ -139,7 +139,7 @@ public record MultiSmoothMinOrMax(List<MultiSmoothMinOrMax.Entry> entries, boole
     public static final String SERIALIZED_NAME = "multi_smooth_min_or_max";
     public static final KeyDispatchDataCodec<MultiSmoothMinOrMax> CODEC = KeyDispatchDataCodec.of(RecordCodecBuilder.mapCodec((instance) -> {
         return instance.group(
-                Codec.list(MultiSmoothMinOrMax.Entry.CODEC.codec()).fieldOf("entries").forGetter(MultiSmoothMinOrMax::entries),
+                Codec.list(MultiSmoothMinOrMax.Entry.CODEC.codec().codec()).fieldOf("entries").forGetter(MultiSmoothMinOrMax::entries),
                 Codec.BOOL.fieldOf("is_min").forGetter(MultiSmoothMinOrMax::isMin)
         ).apply(instance, MultiSmoothMinOrMax::create);
     }));
