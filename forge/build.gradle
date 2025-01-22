@@ -32,6 +32,9 @@ configurations {
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.forge_version}"
 
+    // Bundled only with newer Minecraft updates. Need to import it manually for this version.
+    forgeRuntimeLibrary include("org.joml:joml:${rootProject.joml_version}")
+
     implementation(include("io.github.llamalad7:mixinextras-forge:${rootProject.mixinextras_version}"))
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }

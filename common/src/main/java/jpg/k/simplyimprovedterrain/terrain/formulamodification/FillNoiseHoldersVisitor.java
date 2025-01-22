@@ -1,12 +1,12 @@
 package jpg.k.simplyimprovedterrain.terrain.formulamodification;
 
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderGetter;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.*;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
-public record FillNoiseHoldersVisitor(HolderGetter<NormalNoise.NoiseParameters> noiseParametersRegistry) implements DensityFunction.Visitor {
+public record FillNoiseHoldersVisitor(Registry<NormalNoise.NoiseParameters> noiseParametersRegistry) implements DensityFunction.Visitor {
 
     private static final long STANDIN_NOISE_SEED = 0;
 

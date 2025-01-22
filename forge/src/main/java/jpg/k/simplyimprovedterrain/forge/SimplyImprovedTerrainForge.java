@@ -2,7 +2,7 @@ package jpg.k.simplyimprovedterrain.forge;
 
 //import dev.architectury.platform.forge.EventBuses;
 import jpg.k.simplyimprovedterrain.SimplyImprovedTerrain;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.RegisterEvent;
@@ -18,7 +18,7 @@ public class SimplyImprovedTerrainForge {
 
     private static void register(RegisterEvent event) {
         SimplyImprovedTerrain.bootstrap((serializedName, object) -> event.register(
-                Registries.DENSITY_FUNCTION_TYPE, SimplyImprovedTerrain.toResourceLocation(serializedName), () -> object
+                Registry.DENSITY_FUNCTION_TYPE_REGISTRY, SimplyImprovedTerrain.toResourceLocation(serializedName), () -> object
         ));
     }
 }

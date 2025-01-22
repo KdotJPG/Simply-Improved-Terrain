@@ -29,6 +29,9 @@ dependencies {
     modImplementation "org.quiltmc:quilt-loader:${rootProject.quilt_loader_version}"
     modApi "org.quiltmc.quilted-fabric-api:quilted-fabric-api:${rootProject.quilt_fabric_api_version}"
 
+    // Bundled only with newer Minecraft updates. Need to import it manually for this version.
+    include(implementation("org.joml:joml:${rootProject.joml_version}"))
+
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:${rootProject.mixinextras_version}")))
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }

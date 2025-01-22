@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.LakeFeature;
+import net.minecraft.world.level.material.Material;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -204,15 +205,15 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
 
                         if (states[index | STATE_INDEX_IS_BARRIER]) {
                             BlockPos blockPosHere = origin.offset(dx, dy, dz);
-                            BlockState blockStateHere = worldGenLevel.getBlockState(blockPosHere);
+                            Material materialHere = worldGenLevel.getBlockState(blockPosHere).getMaterial();
 
                             // Abort if we encounter fluid above the surface...
-                            if (dy >= 0 && blockStateHere.liquid()) {
+                            if (dy >= 0 && materialHere.isLiquid()) {
                                 return false;
                             }
 
                             // ... or any non-solidity + unmatching fluidity below it.
-                            if (dy < 0 && !blockStateHere.isSolid() && worldGenLevel.getBlockState(blockPosHere) != fluidBlockState) {
+                            if (dy < 0 && !materialHere.isSolid() && worldGenLevel.getBlockState(blockPosHere) != fluidBlockState) {
                                 return false;
                             }
                         }
@@ -273,7 +274,7 @@ public abstract class MixinLakeFeature extends Feature<LakeFeature.Configuration
 
                             if (shouldPlaceBarrier) {
                                 BlockState blockStateHere = worldGenLevel.getBlockState(blockPosHere);
-                                if (blockStateHere.isSolid() && !blockStateHere.is(BlockTags.LAVA_POOL_STONE_CANNOT_REPLACE)) {
+                                if (blockStateHere.getMaterial().isSolid() && !blockStateHere.is(BlockTags.LAVA_POOL_STONE_CANNOT_REPLACE)) {
                                     worldGenLevel.setBlock(blockPosHere, barrierBlockState, 2);
                                     this.markAboveForPostProcessing(worldGenLevel, blockPosHere);
                                 }

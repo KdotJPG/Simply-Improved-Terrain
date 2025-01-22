@@ -2,7 +2,7 @@ package jpg.k.simplyimprovedterrain.terrain.formulamodification;
 
 import com.mojang.serialization.Codec;
 import jpg.k.simplyimprovedterrain.terrain.formulamodification.caching.Caching;
-import net.minecraft.core.HolderGetter;
+import net.minecraft.core.Registry;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
@@ -16,7 +16,7 @@ public class TerrainFormulaModification {
         callback.accept(CourseAlteringNode.SERIALIZED_NAME, CourseAlteringNode.CODEC.codec());
     }
 
-    public static NoiseRouter translateFormula(NoiseRouter noiseRouter, HolderGetter<NormalNoise.NoiseParameters> noiseParametersRegistry) {
+    public static NoiseRouter translateFormula(NoiseRouter noiseRouter, Registry<NormalNoise.NoiseParameters> noiseParametersRegistry) {
         return translateFormula(noiseRouter, NoiseRouter::mapAll, noiseParametersRegistry);
     }
 
@@ -32,7 +32,7 @@ public class TerrainFormulaModification {
         System.out.println(element);
     }
 
-    private static <T> T translateFormula(T subject, BiFunction<T, DensityFunction.Visitor, T> mapAllFunction, HolderGetter<NormalNoise.NoiseParameters> noiseParametersRegistry) {
+    private static <T> T translateFormula(T subject, BiFunction<T, DensityFunction.Visitor, T> mapAllFunction, Registry<NormalNoise.NoiseParameters> noiseParametersRegistry) {
         subject = mapAllFunction.apply(subject, RemoveHoldersVisitor.INSTANCE);
         subject = mapAllFunction.apply(subject, AddCourseAlteringNodesVisitor.INSTANCE);
         subject = mapAllFunction.apply(subject, MarkObligate2DFunctionsVisitor.INSTANCE);

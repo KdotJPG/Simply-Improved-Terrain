@@ -2,7 +2,6 @@ package jpg.k.simplyimprovedterrain.mixin;
 
 import jpg.k.simplyimprovedterrain.biome.FiddledBiomeResolver;
 import jpg.k.simplyimprovedterrain.biome.WrappedFiddledBiomeResolver;
-import jpg.k.simplyimprovedterrain.mixinapi.IMixinRandomState;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.biome.BiomeResolver;
@@ -22,9 +21,8 @@ public class MixinNoiseBasedChunkGenerator {
     private BiomeResolver modifyBiomeSource(BiomeResolver biomeSourceOriginal, Blender blender, RandomState randomState, StructureManager structureManager, ChunkAccess chunkAccess) {
 
         // Match BiomeManager sample displacements where possible.
-        if (biomeSourceOriginal instanceof FiddledBiomeResolver fiddledBiomeResolver &&
-                (Object) randomState instanceof IMixinRandomState mixinRandomState) {
-            long biomeManagerSeed = BiomeManager.obfuscateSeed(mixinRandomState.worldSeed());
+        if (biomeSourceOriginal instanceof FiddledBiomeResolver fiddledBiomeResolver) {
+            long biomeManagerSeed = BiomeManager.obfuscateSeed(randomState.legacyLevelSeed());
             return new WrappedFiddledBiomeResolver(fiddledBiomeResolver, biomeManagerSeed);
         }
 
