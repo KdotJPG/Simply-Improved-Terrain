@@ -2,6 +2,8 @@
 
 Simply Improved Terrain rewrites some of the terrain generation components in Minecraft to improve their visual results, while preserving the overall Vanilla impression. Specifically, it focuses on increasing directional variety, grid independence, and overall shape variation. This mod is designed as a drop-in with intent for it to be compatible with many modpacks and datapacks.
 
+![](https://github.com/KdotJPG/Simply-Improved-Terrain/assets/8829856/aafdf1c8-bc9b-43ea-8fd3-0309de00892c)
+
 ### Changes Applied:
 
 - **Sharpens Terrain Curvature**: Reduces square-shaped distortions in the terrain by separating 3D noise into independent interpolation channels and eliminating interpolation from 2D noise.
