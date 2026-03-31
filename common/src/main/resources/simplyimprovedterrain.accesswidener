@@ -29,3 +29,4 @@ accessible class net/minecraft/world/level/levelgen/OreVeinifier$VeinType
 accessible field net/minecraft/world/level/levelgen/OreVeinifier$VeinType minY I
 accessible field net/minecraft/world/level/levelgen/OreVeinifier$VeinType maxY I
 accessible method net/minecraft/world/level/levelgen/feature/DripstoneUtils isEmptyOrWater (Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;)Z
+accessible class net/minecraft/core/Holder$Reference$Type

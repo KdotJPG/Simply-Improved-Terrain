@@ -14,6 +14,7 @@
     "MixinBlendedNoise",
     "MixinBlockBlobFeature",
     "MixinBlueIceFeature",
+    "MixinChunkMap",
     "MixinClimateSampler",
     "MixinDiskFeature",
     "MixinDripstoneClusterFeature",
